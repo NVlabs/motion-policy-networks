@@ -1,0 +1,122 @@
+# Copyright (c) 2021, NVIDIA CORPORATION.  All rights reserved.
+#
+# NVIDIA CORPORATION and its licensors retain all intellectual property
+# and proprietary rights in and to this software, related documentation
+# and any modifications thereto.  Any use, reproduction, disclosure or
+# distribution of this software and related documentation without an express
+# license agreement from NVIDIA CORPORATION is strictly prohibited.
+
+api_version: 1.0
+
+fabric_params:
+    joint_inertia:
+        inertia: 1.0
+    joint_limit_avoidance:
+        barrier_gain: 1.0
+        barrier_offset: -0.1
+        barrier_max_acceleration: 1e12
+        soft_relu_gain: 1200.0
+        soft_relu_sharpness: 20.0
+        soft_relu_offset: 1.0
+        metric_scalar: 1.5
+        metric_exploder_offset: -0.1
+        max_metric: 1e12
+        damping_barrier_gain: 0.
+    forcing_joint_limit_avoidance:
+        barrier_gain: 0.016
+        barrier_offset: -0.1
+        barrier_max_acceleration: 1e12
+        soft_relu_gain: 100.0
+        soft_relu_sharpness: 20.0
+        soft_relu_offset: 0.2
+        metric_scalar: 0.16
+        metric_exploder_offset: -0.1
+        max_metric: 1e12
+        damping_barrier_gain: 10.
+    obstacle_avoidance:
+        barrier_gain: 10.
+        barrier_offset: 0.
+        barrier_max_acceleration: 1e12
+        soft_relu_gain: 800.0
+        soft_relu_sharpness: 20.0
+        soft_relu_offset: 0.25
+        metric_scalar: 1.
+        metric_exploder_offset: -0.1
+        max_metric: 1e12
+        damping_barrier_gain: 0.
+    forcing_obstacle_avoidance:
+        barrier_gain: 0.05
+        barrier_offset: 0.
+        barrier_max_acceleration: 1e12
+        soft_relu_gain: 0.
+        soft_relu_sharpness: 20.0
+        soft_relu_offset: 0.2
+        metric_scalar: 0.08
+        metric_exploder_offset: 0.
+        max_metric: 1e12
+        damping_barrier_gain: 10.
+    cspace_attractor:
+        metric_scalar: 1.5
+        conical_sharpness: 100.0
+        conical_gain: 15.
+    target_attractor:
+        min_isotropic_mass: 75.
+        max_isotropic_mass: 75.
+        mass_sharpness: 20.0
+        mass_switch_offset: 1.
+        boosting_ratio_sharpness: 20.0
+        conical_sharpness: 20.0
+        conical_gain: 80.
+    forcing_target_attractor:
+        min_isotropic_mass: 1.
+        max_isotropic_mass: 15.
+        mass_sharpness: 20.0
+        mass_switch_offset: 0.2
+        boosting_ratio_sharpness: 20.0
+        conical_sharpness: 20.0
+        conical_gain: 80.
+        damping: 80.
+        damping_radius: 0.2
+
+damping_control_params:
+    speed_control:
+        speed_control_enabled: True
+        target_execution_speed: 0.75
+        target_execution_sharpness: 100.0
+        target_execution_offset: 0.05
+    speed_boosting:
+        speed_boosting_enabled: True
+        speed_boosting_gain: 10.
+        speed_boosting_budget: 20.
+        speed_boosting_sharpness: 20.0
+    damping:
+        damping_gain: 0.
+        proximity_damping_enabled: True
+        proximity_damping_gain: 15.
+        proximity_damping_sharpness: 20.0
+        proximity_damping_distance: 0.2
+    joint_speed_limiting:
+        cspace_speed_limit: 1.6999
+        horizon_in_seconds: 0.02
+
+body_cylinders:
+    - name: base
+      pt1: [0, 0, 0.333]
+      pt2: [0, 0, -0.3]
+      radius: 0.15
+
+self_collision_spheres:
+    - name: panda_link7
+      radius: .1
+    - name: panda_wrist_end_pt
+      radius: .01
+    - name: panda_hand
+      radius: .01
+    - name: panda_face_left
+      radius: .01
+    - name: panda_face_right
+      radius: .01
+    - name: panda_leftfingertip
+      radius: .01
+    - name: panda_rightfingertip
+      radius: .01
