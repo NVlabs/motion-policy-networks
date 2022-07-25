@@ -46,6 +46,7 @@ class PointCloudBase(Dataset):
     def __init__(
         self,
         directory: Path,
+        trajectory_key: str,
         num_robot_points: int,
         num_obstacle_points: int,
         num_target_points: int,
@@ -64,9 +65,11 @@ class PointCloudBase(Dataset):
                                    This is only used for train datasets.
         """
         self._init_directory(directory, dataset_type)
+        self.trajectory_key = trajectory_key
         self.train = dataset_type == DatasetType.TRAIN
         with h5py.File(str(self._database), "r") as f:
-            self.expert_length = f["robot_configurations"].shape[1]
+            self._num_trajectories = f[self.trajectory_key].shape[0]
+            self.expert_length = f[self.trajectory_key].shape[1]
 
         self.num_obstacle_points = num_obstacle_points
         self.num_robot_points = num_robot_points
@@ -95,8 +98,6 @@ class PointCloudBase(Dataset):
         databases = list(directory.glob("**/*.hdf5"))
         assert len(databases) == 1
         self._database = databases[0]
-        with h5py.File(str(self._database), "r") as f:
-            self._num_trajectories = f["robot_configurations"].shape[0]
 
     @property
     def num_trajectories(self):
@@ -129,7 +130,7 @@ class PointCloudBase(Dataset):
         item = {}
         with h5py.File(str(self._database), "r") as f:
             target_pose = FrankaRealRobot.fk(
-                f["robot_configurations"][trajectory_idx, -1, :]
+                f[self.trajectory_key][trajectory_idx, -1, :]
             )
             target_points = self.fk_sampler.sample_end_effector(
                 torch.as_tensor(target_pose.matrix).float(),
@@ -137,7 +138,7 @@ class PointCloudBase(Dataset):
             )
             item["target_position"] = torch.as_tensor(target_pose.xyz).float()
 
-            config = f["robot_configurations"][trajectory_idx, timestep, :]
+            config = f[self.trajectory_key][trajectory_idx, timestep, :]
             config_tensor = torch.as_tensor(config).float()
 
             if self.train:
@@ -268,6 +269,7 @@ class PointCloudTrajectoryDataset(PointCloudBase):
     def __init__(
         self,
         directory: Path,
+        trajectory_key: str,
         num_robot_points: int,
         num_obstacle_points: int,
         num_target_points: int,
@@ -286,6 +288,7 @@ class PointCloudTrajectoryDataset(PointCloudBase):
         ), "This dataset is not meant for training"
         super().__init__(
             directory,
+            trajectory_key,
             num_robot_points,
             num_obstacle_points,
             num_target_points,
@@ -325,6 +328,7 @@ class PointCloudInstanceDataset(PointCloudBase):
     def __init__(
         self,
         directory: Path,
+        trajectory_key: str,
         num_robot_points: int,
         num_obstacle_points: int,
         num_target_points: int,
@@ -344,6 +348,7 @@ class PointCloudInstanceDataset(PointCloudBase):
         """
         super().__init__(
             directory,
+            trajectory_key,
             num_robot_points,
             num_obstacle_points,
             num_target_points,
@@ -382,7 +387,7 @@ class PointCloudInstanceDataset(PointCloudBase):
         with h5py.File(str(self._database), "r") as f:
             item["supervision"] = self.normalize(
                 torch.as_tensor(
-                    f["robot_configurations"][trajectory_idx, supervision_timestep, :]
+                    f[self.trajectory_key][trajectory_idx, supervision_timestep, :]
                 )
             ).float()
 
@@ -393,6 +398,7 @@ class DataModule(pl.LightningDataModule):
     def __init__(
         self,
         data_dir: str,
+        trajectory_key: str,
         num_robot_points: int,
         num_obstacle_points: int,
         num_target_points: int,
@@ -403,6 +409,7 @@ class DataModule(pl.LightningDataModule):
         """
         :param data_dir str: The directory with the data. Directory structure should
                              be as defined in `PointCloudBase`
+        :param trajectory_key str: The key in the hdf5 dataset that contains the expert trajectories
         :param num_robot_points int: The number of points to sample from the robot
         :param num_obstacle_points int: The number of points to sample from the obstacles
         :param num_target_points int: The number of points to sample from the target
@@ -415,6 +422,7 @@ class DataModule(pl.LightningDataModule):
         """
         super().__init__()
         self.data_dir = Path(data_dir)
+        self.trajectory_key = trajectory_key
         self.batch_size = batch_size
         self.num_robot_points = num_robot_points
         self.num_obstacle_points = num_obstacle_points
@@ -433,6 +441,7 @@ class DataModule(pl.LightningDataModule):
         if stage == "fit" or stage is None:
             self.data_train = PointCloudInstanceDataset(
                 self.data_dir,
+                self.trajectory_key,
                 self.num_robot_points,
                 self.num_obstacle_points,
                 self.num_target_points,
@@ -441,6 +450,7 @@ class DataModule(pl.LightningDataModule):
             )
             self.data_val = PointCloudTrajectoryDataset(
                 self.data_dir,
+                self.trajectory_key,
                 self.num_robot_points,
                 self.num_obstacle_points,
                 self.num_target_points,
@@ -449,6 +459,7 @@ class DataModule(pl.LightningDataModule):
         if stage == "test" or stage is None:
             self.data_test = PointCloudInstanceDataset(
                 self.data_dir,
+                self.trajectory_key,
                 self.num_robot_points,
                 self.num_obstacle_points,
                 self.num_target_points,

@@ -48,7 +48,7 @@ NUM_SCENES = 6000  # The maximum number of scenes to generate in a single job
 NUM_PLANS_PER_SCENE = (
     98  # The number of total candidate start or goals to use to plan experts
 )
-MAX_JERK = 0.15  # Used for validating the expert trajectories
+MAX_JERK = 0.15  # Used for validating the hybrid expert trajectories
 PIPELINE_TIMEOUT = 36000  # 10 hours in seconds--after which all new scenes will immediately return nothing
 
 # This parameter dictates the maximum number of cuboids to be used in an environment
@@ -66,7 +66,7 @@ class Result:
     error_codes: List[str] = field(default_factory=list)
     cuboids: List[Cuboid] = field(default_factory=list)
     cylinders: List[Cylinder] = field(default_factory=list)
-    expert_solution: np.ndarray = field(default_factory=lambda: np.array([]))
+    hybrid_solution: np.ndarray = field(default_factory=lambda: np.array([]))
     global_solution: np.ndarray = field(default_factory=lambda: np.array([]))
 
 
@@ -455,7 +455,7 @@ def forward_backward(
                 selfcc,
             ),
         )
-        forward_result.expert_solution = downsampled_trajectory
+        forward_result.hybrid_solution = downsampled_trajectory
 
     end_eff_plan.reverse()
     chunked_trajectory, final_pose = get_fabric_chunks(
@@ -476,7 +476,7 @@ def forward_backward(
                 selfcc,
             ),
         )
-        backward_result.expert_solution = downsampled_trajectory
+        backward_result.hybrid_solution = downsampled_trajectory
     return results
 
 
@@ -610,7 +610,7 @@ def generate_data_for_single_env(_: Any):
     cylinders = env.cylinders
     file_name = f"{TMP_DATA_DIR}/{uuid.uuid1()}.hdf5"
     with h5py.File(file_name, "w-") as f:
-        expert_solutions = f.create_dataset("expert_solutions", (n, SEQUENCE_LENGTH, 7))
+        hybrid_solutions = f.create_dataset("hybrid_solutions", (n, SEQUENCE_LENGTH, 7))
         global_solutions = f.create_dataset("global_solutions", (n, SEQUENCE_LENGTH, 7))
         cuboid_dims = f.create_dataset("cuboid_dims", (len(cuboids), 3))
         cuboid_centers = f.create_dataset("cuboid_centers", (len(cuboids), 3))
@@ -624,7 +624,7 @@ def generate_data_for_single_env(_: Any):
         for ii in range(n):
             global_solutions[ii, :, :] = results[ii].global_solution
             if len(results[ii].error_codes) == 0:
-                expert_solutions[ii, :, :] = results[ii].expert_solution
+                hybrid_solutions[ii, :, :] = results[ii].hybrid_solution
         for jj in range(len(cuboids)):
             cuboid_dims[jj, :] = cuboids[jj].dims
             cuboid_centers[jj, :] = cuboids[jj].pose.xyz
@@ -668,8 +668,8 @@ def gen():
                 max_cylinders = num_cylinders
 
     with h5py.File(f"{FINAL_DATA_DIR}/all_data.hdf5", "w-") as f:
-        expert_solutions = f.create_dataset(
-            "expert_solutions", (total_trajectories, SEQUENCE_LENGTH, 7)
+        hybrid_solutions = f.create_dataset(
+            "hybrid_solutions", (total_trajectories, SEQUENCE_LENGTH, 7)
         )
         global_solutions = f.create_dataset(
             "global_solutions", (total_trajectories, SEQUENCE_LENGTH, 7)
@@ -705,7 +705,7 @@ def gen():
                 global_solutions[chunk_start:chunk_end, ...] = g["global_solutions"][
                     ...
                 ]
-                expert_solutions[chunk_start:chunk_end, ...] = g["expert_solutions"][
+                hybrid_solutions[chunk_start:chunk_end, ...] = g["hybrid_solutions"][
                     ...
                 ]
 

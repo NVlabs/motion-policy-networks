@@ -3,6 +3,7 @@ training_model_parameters:
     collision_loss_weight: 5
 data_module_parameters:
   data_dir: /data
+  trajectory_key: 'hybrid_solutions' # Could also use 'global_solutions' for the global expert
   num_obstacle_points: 4096
   num_target_points: 128
   num_workers: 80
