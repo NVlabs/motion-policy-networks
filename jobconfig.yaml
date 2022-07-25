@@ -1,0 +1,18 @@
+training_model_parameters:
+    point_match_loss_weight: 1
+    collision_loss_weight: 5
+data_module_parameters:
+  data_dir: /data
+  num_obstacle_points: 4096
+  num_target_points: 128
+  num_workers: 80
+  random_scale: 0.015
+shared_parameters:
+    num_robot_points: 2048
+checkpoint_interval: 60
+validation_interval: 3000
+gpus: 1 # If > 1, will use DDP for training.
+batch_size: 10
+save_checkpoint_dir: /workspace/mpinets_checkpoints
+experiment_name: ExampleTrainingJob
+description: "Here is where you put in details about the training job to keep track of what was changed"
