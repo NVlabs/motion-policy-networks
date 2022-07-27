@@ -11,13 +11,29 @@ The easiest way to install the code here is to build the attached docker contain
 2. Docker makes it easy to manage the entire system environment, e.g. the CUDA
    runtime, the various upstream dependencies, etc.
 
-If you have a strong need to build this repo on your host machine, you can follow the same steps as are outlined in the [Dockerfile](docker/Dockerfile). If you have your own expert data generation pipeline or intend to use our publicly available datasets, you only need to install the learning dependencies (the different areas should be well-documented in the Dockerfile). However, if you want to run the data generation pipeline, you will either need to download Nvidia Isaac Sim to get access to Geometric Fabrics or build the Docker container.
+If you have a strong need to build this repo on your host machine, you can follow the same steps as are outlined in the [Dockerfile](docker/Dockerfile). If you have your own expert data generation pipeline or intend to use our publicly available datasets, you only need to install the learning dependencies (the different areas should be well-documented in the Dockerfile). However, if you want to run the data generation pipeline, you will either need to download Nvidia Isaac Sim to get access to Geometric Fabrics or build the Docker container we include.
 
-In order to build the Docker container, first clone this repo:
+In order to build the Docker container included in this repo, you will need access
+to the Isaac Sim docker container (our container is built on top of it). You can find detailed instructioned on how
+to do this
+[here](https://docs.omniverse.nvidia.com/app_isaacsim/app_isaacsim/install_advanced.html#isaac-sim-app-install-advanced),
+but we provide summarized instructions here as well.
+
+First you will need to join
+the [Nvidia Developer Program](https://developer.nvidia.com/developer-program).
+After joining, you can generate your NGC API key [as described here](https://docs.nvidia.com/ngc/ngc-overview/index.html#generating-api-keyget).
+
+With your NGC API key, you must log in to NGC from your host computer. As your
+username, use the string `$oauthtoken`. As your password, use your NGC API key.
+To log in, use the command
+```
+sudo docker login nvcr.io
+```
+Next, clone this repo using:
 ```
 git clone https://gitlab-master.nvidia.com/srl/motion-policy-networks
 ```
-Next, navigate inside the repo (i.e. `cd motion-policy-networks`) and build the docker with
+Navigate inside the repo (e.g. `cd motion-policy-networks`) and build the docker with
 ```
 docker build --tag mpinets --network=host --file docker/Dockerfile .
 ```
