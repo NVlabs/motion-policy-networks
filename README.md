@@ -57,8 +57,20 @@ either inside the docker or on the host machine.
 All usage described below must happen inside the docker container. For all the commands below,
 assume that they should be run inside the docker container.
 
+### Using our pregenerated data
+We provide the dataset of Hybrid Expert trajectories that we used to train our
+model in Motion Policy Networks. [You can download this data here]().
+
+If you are using the Docker container, you will need to mount this data after
+downloading it. If the path this data is downloaded to is
+`/PATH/TO/THE/DATA`, you can run the Docker with a similar command to the
+one above:
+```
+docker run --interactive --tty --rm --gpus all --network host --env DISPLAY=unix$DISPLAY --env XAUTHORITY --env NVIDIA_DRIVER_CAPABILITIES=all --env "ACCEPT_EULA=Y" --volume /PATH/TO/THE/REPO:/root/mpinets --volume /PATH/TO/THE/DATA:/data mpinets /bin/bash -c 'export PYTHONPATH=/root/mpinets:$PYTHONPATH; /bin/bash'
+```
 ### Data Generation
-We provide scripts we used to generate our dataset. These scripts are designed
+If you would like to generate the data yourself, we provide scripts we used to
+generate our dataset. These scripts are designed
 to work in a cloud-based system, but generating a large dataset will require
 some data management. To generate the data in Motion Policy Networks, we used a
 cluster of 80 server nodes running these scripts in parallel.
@@ -133,8 +145,8 @@ FINAL_DATA_PATH/
     val.hdf5
   test/
     test.hdf5
-```
 
+```
 ### Training Motion Policy Networks
 
 Once you have the data, either by generating the dataset or by downloading
