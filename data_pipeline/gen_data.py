@@ -505,7 +505,13 @@ def exhaust_environment(
         neutral_candidates = env.gen_neutral_candidates(n, selfcc)
         random.shuffle(candidates[0])
         random.shuffle(candidates[1])
-        nonneutral_candidates = candidates[0][: n // 2] + candidates[1][: n // 2]
+        if n <= 1:
+            # This code path exists for testing purposes to make sure the
+            # pipeline is working. In a typical usecase, you should be generating more
+            # data than this
+            nonneutral_candidates = candidates[0][:1]
+        else:
+            nonneutral_candidates = candidates[0][: n // 2] + candidates[1][: n // 2]
         for c1, c2 in itertools.product(neutral_candidates, nonneutral_candidates):
             results.extend(forward_backward(c1, c2, env.cuboids, env.cylinders, selfcc))
     else:
@@ -584,10 +590,25 @@ def gen_valid_env(selfcc: FrankaSelfCollisionChecker) -> Environment:
     return env
 
 
-def generate_data_for_single_env(_: Any):
+def gen_single_env_data() -> Tuple[Environment, List[Result]]:
     """
-    Generates a bunch of trajectories for a single environment and then
-    saves them.
+    Generates an environment and a bunch of trajectories in it.
+
+    :rtype Tuple[Environment, List[Result]]: The environment and the trajectories in it
+    """
+    # The physical Franka's internal collision checker is more conservative than Bullet's
+    # This will allow for more realistic collision checks
+    selfcc = FrankaSelfCollisionChecker()
+
+    env = gen_valid_env(selfcc)
+    results = exhaust_environment(env, NUM_PLANS_PER_SCENE, selfcc)
+    return env, results
+
+
+def gen_single_env(_: Any):
+    """
+    Calls `gen_single_env_data` to generates a bunch of trajectories for a
+    single environment and then saves them to a temporary file.
 
     :param _ Any: This is a throwaway needed to run the multiprocessing
     """
@@ -598,13 +619,8 @@ def generate_data_for_single_env(_: Any):
     # will generate the same data
     np.random.seed()
     random.seed()
+    env, results = gen_single_env_data()
 
-    # The physical Franka's internal collision checker is more conservative than Bullet's
-    # This will allow for more realistic collision checks
-    selfcc = FrankaSelfCollisionChecker()
-
-    env = gen_valid_env(selfcc)
-    results = exhaust_environment(env, NUM_PLANS_PER_SCENE, selfcc)
     n = len(results)
     cuboids = env.cuboids
     cylinders = env.cylinders
@@ -647,7 +663,7 @@ def gen():
 
     with Pool() as pool:
         for _ in tqdm(
-            pool.imap_unordered(generate_data_for_single_env, non_seeds),
+            pool.imap_unordered(gen_single_env, non_seeds),
             total=NUM_SCENES,
         ):
             pass
@@ -731,6 +747,23 @@ def gen():
         fi.unlink()
 
 
+def visualize_single_env():
+    env, results = gen_single_env_data()
+    sim = Bullet(gui=True)
+    robot = sim.load_robot(FrankaRobot)
+    sim.load_primitives(env.obstacles)
+    for r in results:
+        print("Visualizing global solution")
+        for q in r.global_solution:
+            robot.marionette(q)
+            time.sleep(0.1)
+        print("Visualizing hybrid solution")
+        for q in r.hybrid_solution:
+            robot.marionette(q)
+            time.sleep(0.1)
+        time.sleep(0.2)
+
+
 if __name__ == "__main__":
     """
     This program makes heavy use of global variables. This is **not** best practice,
@@ -741,66 +774,99 @@ if __name__ == "__main__":
     global START_TIME
     START_TIME = time.time()
 
+    np.random.seed()
+    random.seed()
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "env_type",
         choices=["tabletop", "cubby", "merged_cubby", "dresser"],
         help="Include this argument if there are subtypes",
     )
-    parser.add_argument(
+    subparsers = parser.add_subparsers(
+        help="Whether to run the full pipeline, the test pipeline, or an environment test",
+        dest="run_type",
+    )
+    run_full = subparsers.add_parser(
+        "full-pipeline",
+        help=(
+            "Run full pipeline with multiprocessing. Specific configuration (job size,"
+            " timeouts, etc) are hardcoded at the top of the file."
+        ),
+    )
+    run_full.add_argument(
         "data_dir",
         type=str,
         help="An existing _empty_ directory where the output data will be saved",
     )
+
+    test_pipeline = subparsers.add_parser(
+        "test-pipeline",
+        help=(
+            "Runs a miniature version of the full pipeline. Specific configuration (job size,"
+            " timeouts, etc) are hardcoded at the top of the file."
+        ),
+    )
+    test_pipeline.add_argument(
+        "data_dir",
+        type=str,
+        help="An existing _empty_ directory where the output data will be saved",
+    )
+
+    test_pipeline = subparsers.add_parser(
+        "test-environment",
+        help="Generates a few trajectories for a single environment and visualizes them with Pybullet",
+    )
+
     parser.add_argument(
         "--neutral",
         action="store_true",
-        help="Whether the plans should be to/from a neutral pose",
+        help=(
+            "If set, plans will always begin or end with a collision-free neutral pose."
+            " If not set, plans will always start and end with a task-oriented pose"
+        ),
     )
-    parser.add_argument(
-        "--test",
-        action="store_true",
-        help="Reduces the size of the job to test whether the pipeline is working",
-    )
+
     args = parser.parse_args()
-    if args.test:
-        NUM_SCENES = 10  # The maximum number of scenes to generate in a single job
-        NUM_PLANS_PER_SCENE = (
-            2  # The number of total candidate start or goals to use to plan experts
-        )
 
     # Used to tell all the various subprocesses whether to use neutral poses
     global IS_NEUTRAL
     IS_NEUTRAL = args.neutral
 
-    # A temporary directory where the per-scene data will be saved
-    global TMP_DATA_DIR
-    TMP_DATA_DIR = f"/tmp_data_{uuid.uuid1()}/"
-    os.mkdir(TMP_DATA_DIR)
-    assert (
-        os.path.isdir(TMP_DATA_DIR)
-        and len(os.listdir(TMP_DATA_DIR)) == 0
-        and os.access(TMP_DATA_DIR, os.W_OK)
-    )
-
-    # The directory where the final data will be saved--checks whether it's writeable and empty
-    global FINAL_DATA_DIR
-    FINAL_DATA_DIR = args.data_dir
-    assert (
-        os.path.isdir(FINAL_DATA_DIR)
-        and len(os.listdir(FINAL_DATA_DIR)) == 0
-        and os.access(FINAL_DATA_DIR, os.W_OK)
-    )
-
     # Sets the env type
     global ENV_TYPE
     ENV_TYPE = args.env_type
 
-    np.random.seed()
-    random.seed()
-    print(f"Final data with save to {FINAL_DATA_DIR}")
-    print(f"Temporary data will save to {TMP_DATA_DIR}")
-    print("Using args:")
-    print(f"    (env_type: {args.env_type})")
-    print(f"    (neutral: {args.neutral})")
-    gen()
+    if args.run_type in ["test-pipeline", "test-environment"]:
+        NUM_SCENES = 10  # The maximum number of scenes to generate in a single job
+        NUM_PLANS_PER_SCENE = (
+            2  # The number of total candidate start or goals to use to plan experts
+        )
+    if args.run_type == "test-environment":
+        visualize_single_env()
+    else:
+        # A temporary directory where the per-scene data will be saved
+        global TMP_DATA_DIR
+        TMP_DATA_DIR = f"//tmp/tmp_data_{uuid.uuid1()}/"
+        os.mkdir(TMP_DATA_DIR)
+        assert (
+            os.path.isdir(TMP_DATA_DIR)
+            and len(os.listdir(TMP_DATA_DIR)) == 0
+            and os.access(TMP_DATA_DIR, os.W_OK)
+        )
+
+        # The directory where the final data will be saved--checks whether it's writeable and empty
+        global FINAL_DATA_DIR
+        FINAL_DATA_DIR = args.data_dir
+        assert (
+            os.path.isdir(FINAL_DATA_DIR)
+            and len(os.listdir(FINAL_DATA_DIR)) == 0
+            and os.access(FINAL_DATA_DIR, os.W_OK)
+        )
+
+        print(f"Final data with save to {FINAL_DATA_DIR}")
+        print(f"Temporary data will save to {TMP_DATA_DIR}")
+        print("Using args:")
+        print(f"    (env_type: {args.env_type})")
+        print(f"    (neutral: {args.neutral})")
+        gen()
