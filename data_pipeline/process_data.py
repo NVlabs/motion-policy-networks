@@ -80,7 +80,7 @@ def merge_files(files: List[Path], output_file: str):
 def merge_data_pipeline_files(data_path: str, output_file: str):
     """
     Will merge a bunch of final output files from the `gen_data.py` script. These files
-    should all correspond to the same motion paradigm (i.e. with or without neutral poses)
+    should all correspond to the same problem paradigm (i.e. with or without neutral poses)
     of the same scene type (i.e. dresser, cubby, merged cubby, or tabletop). For example,
     they should all be dresser scenes going to/from a neutral pose.
 
@@ -190,7 +190,7 @@ def merge_scenes(input_dir: str, output_dir: str):
     """
     Merges all the `train.hdf5` files, merges all the `val.hdf5` files, and merges all the
     `test.hdf5` files to create three files that can be used to train. Use this function
-    to merge datasets with different scene types and motion paradigms
+    to merge datasets with different scene types and problem paradigms
 
     :param input_dir str: The directory containing all the datasets. This should have the
                           following structure (scene types are just examples)
@@ -240,7 +240,7 @@ if __name__ == "__main__":
         "merge-single-scene",
         help=(
             "Will merge a bunch of final output files from the `gen_data.py` script."
-            " These files should all correspond to the same motion paradigm"
+            " These files should all correspond to the same problem paradigm"
             " (i.e. with or without neutral poses) of the same scene type"
             " (i.e. dresser, cubby, merged cubby, or tabletop). For example, they"
             " should all be dresser scenes going to/from a neutral pose."
@@ -333,7 +333,7 @@ if __name__ == "__main__":
         help=(
             "Merges all the `train.hdf5` files, merges all the `val.hdf5` files, and merges all the"
             " `test.hdf5` files to create three files that can be used to train. Use this function"
-            " to merge datasets with different scene types and motion paradigms"
+            " to merge datasets with different scene types and problem paradigms"
         ),
     )
     merge_all_parser.add_argument(
