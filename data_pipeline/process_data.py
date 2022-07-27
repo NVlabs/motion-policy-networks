@@ -203,7 +203,7 @@ def merge_scenes(input_dir: str, output_dir: str):
                                   val.hdf5
                                 test/
                                   test.hdf5
-                             nonneutral/
+                              task_oriented/
                                 train/
                                   train.hdf5
                                 val/
@@ -351,7 +351,7 @@ if __name__ == "__main__":
             "          val.hdf5\n"
             "        test/\n"
             "          test.hdf5\n"
-            "     nonneutral/\n"
+            "     task_oriented/\n"
             "        train/\n"
             "          train.hdf5\n"
             "        val/\n"
