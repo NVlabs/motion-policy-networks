@@ -11,6 +11,7 @@ import git
 from termcolor import colored
 import argparse
 import yaml
+import uuid
 
 PROJECT_ROOT = str(Path(__file__).resolve().parent.parent)
 sys.path.insert(0, PROJECT_ROOT)
@@ -22,6 +23,7 @@ def setup_trainer(
     gpus: int,
     test: bool,
     should_log: bool,
+    should_checkpoint: bool,
     logger: Optional[WandbLogger],
     checkpoint_interval: int,
     checkpoint_dir: str,
@@ -32,7 +34,8 @@ def setup_trainer(
 
     :param gpus int: The number of GPUs (if more than 1, uses DDP)
     :param test bool: Whether to use a test dataset
-    :param should_log bool: Whether to log
+    :param should_log bool: Whether to log to Weights and Biases
+    :param should_checkpoint bool: Whether to save checkpoints
     :param logger Optional[WandbLogger]: The logger object
     :param checkpoint_interval int: The number of minutes between checkpoints
     :param checkpoint_dir str: The directory in which to save checkpoints (a subdirectory will
@@ -59,10 +62,14 @@ def setup_trainer(
     if should_log:
         assert logger is not None, "If should_log is True, logger should not be None"
         experiment_id = str(logger.experiment.id)
+    else:
+        experiment_id = uuid.uuid1()
+    if should_checkpoint:
         if checkpoint_dir is not None:
             dirpath = Path(checkpoint_dir).resolve() / experiment_id
         else:
             dirpath = PROJECT_ROOT / "checkpoints" / experiment_id
+        pl.utilities.rank_zero_info(f"Saving checkpoints to {dirpath}")
         every_n_checkpoint = ModelCheckpoint(
             monitor="val_loss",
             save_last=True,
@@ -77,6 +84,7 @@ def setup_trainer(
         )
         epoch_end_checkpoint.CHECKPOINT_NAME_LAST = "epoch-{epoch}-end"
         callbacks.extend([every_n_checkpoint, epoch_end_checkpoint])
+
     trainer = pl.Trainer(
         enable_checkpointing=should_log,
         callbacks=callbacks,
@@ -150,7 +158,10 @@ def parse_args_and_configuration():
         help="Allow dirty repo and test with only a few batches (disables logging)",
     )
     parser.add_argument(
-        "--no-logging", action="store_true", help="Don't log (just for testing)"
+        "--no-logging", action="store_true", help="Don't log to weights and biases"
+    )
+    parser.add_argument(
+        "--no-checkpointing", action="store_true", help="Don't checkpoint"
     )
     parser.add_argument(
         "--allow-dirty-repo",
@@ -182,7 +193,8 @@ def run():
     """
     config = parse_args_and_configuration()
 
-    print("Experiment name:", colored(config["experiment_name"], "green"))
+    color_name = colored(config["experiment_name"], "green")
+    pl.utilities.rank_zero_info(f"Experiment name: {color_name}")
     logger = setup_logger(
         not config["no_logging"],
         config["experiment_name"],
@@ -193,6 +205,7 @@ def run():
         config["gpus"],
         config["test"],
         should_log=not config["no_logging"],
+        should_checkpoint=not config["no_checkpointing"],
         logger=logger,
         checkpoint_interval=config["checkpoint_interval"],
         checkpoint_dir=config["save_checkpoint_dir"],

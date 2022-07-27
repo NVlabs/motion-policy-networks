@@ -1,92 +1,140 @@
-# motion-policy-networks
-
-
-
-## Getting started
-
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
-
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
-
-## Add your files
-
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
-
-```
-cd existing_repo
-git remote add origin https://gitlab-master.nvidia.com/srl/motion-policy-networks.git
-git branch -M main
-git push -uf origin main
-```
-
-## Integrate with your tools
-
-- [ ] [Set up project integrations](https://gitlab-master.nvidia.com/srl/motion-policy-networks/-/settings/integrations)
-
-## Collaborate with your team
-
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!).  Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+# Motion Policy Networks
 
 ## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+The easiest way to install the code here is to build the attached docker container. We use Docker for several reasons:
+
+1. For the data generation pipeline, many of our dependencies cannot be
+   installed easily via PyPI
+   - OMPL requires a lot of system dependencies and then building from source
+   - Geometric Fabrics are not open source, but are included with Nvidia
+     Omniverse.
+2. Docker makes it easy to manage the entire system environment, e.g. the CUDA
+   runtime, the various upstream dependencies, etc.
+
+If you have a strong need to build this repo on your host machine, you can follow the same steps as are outlined in the [Dockerfile](docker/Dockerfile). If you have your own expert data generation pipeline or intend to use our publicly available datasets, you only need to install the learning dependencies (the different areas should be well-documented in the Dockerfile). However, if you want to run the data generation pipeline, you will either need to download Nvidia Isaac Sim to get access to Geometric Fabrics or build the Docker container.
+
+In order to build the Docker container, first clone this repo:
+```
+git clone https://gitlab-master.nvidia.com/srl/motion-policy-networks
+```
+Next, navigate inside the repo (i.e. `cd motion-policy-networks`) and build the docker with
+```
+docker build --tag mpinets --network=host --file docker/Dockerfile .
+```
+After this is built, you should be able to launch the docker using this command
+(be sure to use the correct paths on your system)
+```
+docker run --interactive --tty --rm --gpus all --network host --env DISPLAY=unix$DISPLAY --env XAUTHORITY --env NVIDIA_DRIVER_CAPABILITIES=all --env "ACCEPT_EULA=Y" --volume /PATH/TO/THE/REPO:/root/mpinets mpinets /bin/bash -c 'export PYTHONPATH=/root/mpinets:$PYTHONPATH; /bin/bash'
+```
+In order to run any GUI-based code in the docker, be sure to add the correct
+user to `xhost` on the host machine. You can do this by running `xhost
++si:localuser:root` in another terminal on the host machine.
+
+Our suggested development setup would be to have two terminals open, one
+running the docker (use this one for running the code) and another editing
+code on the host machine. The `docker run` command above will mount your
+checkout of this repo into the docker, allowing you to edit the files from
+either inside the docker or on the host machine.
 
 ## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+All usage described below must happen inside the docker container. For all the commands below,
+assume that they should be run inside the docker container.
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+### Data Generation
+We provide scripts we used to generate our dataset. These scripts are designed
+to work in a cloud-based system, but generating a large dataset will require
+some data management. To generate the data in Motion Policy Networks, we used a
+cluster of 80 server nodes running these scripts in parallel.
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+You can use [gen_data.py][data_pipeline/gen_data.py] to generate the data. This
+file should have a self-explanatory help string, which you can access with
+`data_pipeline/gen_data.py --help`.
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+Some examples of data generation:
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+To visualize some examples generated from a set of dressers where the robot
+reaches between drawers, you can do
+```
+cd /root/mpinets/data_pipeline
+python3 gen_data.py dresser test-environment
+```
+To run the a similar visualization test where the trajectories all start or end
+with a collision-free neutral pose, you can use
+```
+cd /root/mpinets/data_pipeline
+python3 gen_data.py dresser test-environment --neutral
+```
+To test the data pipeline (i.e. including how the data is saved on disk)
+and generate a small dataset within randomized tabletop environments using
+only task-oriented poses, you can run
+```
+cd /root/mpinets/data_pipeline
+mkdir -p data/tabletop/task_oriented/1
+python3 gen_data.py tabletop test-pipeline /root/mpinets/data_pipeline/data/tabletop/task_oriented/1/
+```
+To generate a large dataset of trajectories in 2x2 cubby environments where each trajectory begins or
+ends with a neutral configuration.
+```
+cd /root/mpinets/data_pipeline
+mkdir -p data/cubby/neutral/1
+python3 gen_data.py cubby full-pipeline /root/mpinets/data_pipeline/data/cubby/neutral/1/ --neutral
+```
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+### Data Cleaning
+After generating the data, you will need to clean it and merge it into a single
+dataset. In the Motion Policy Network dataset, we use the following
+proportions:
 
+- Cubby Neutral: 1 / 12
+- Cubby Task Oriented: 1 / 12
+- Merged Cubby Neutral: 1 / 12
+- Merged Cubby Task Oriented: 1 / 12
+- Dresser Neutral: 1 / 6
+- Dresser Task Oriented: 1 / 6
+- Tabletop Neutral: 1 / 6
+- Tabletop Task Oriented: 1 / 6
+
+We provide a script [process_data.py](data_pipeline/process_data.py) that can
+take the output of `gen_data.py` and clean it up. After running the `full-pipeline` mode
+of`gen_data.py`, it will produce a file in the specified directory called
+`all_data.py`. This is all the data of that multi-process run, which has data
+in a single environmental class where either every trajectory starts or ends
+with a neutral pose or does not. The next step is to clean this data (e.g. keep
+only the problems with a hybrid solution), downsize the dataset to have matching
+sizes across problem types, split the dataset into train, validation, test groups,
+and merge all these individual datasets across various scene types.
+
+These methods are all documented in `process_data.py --help`.
+
+After running the various stages of this script, you will have a dataset that
+looks like
+```
+FINAL_DATA_PATH/
+  train/
+    train.hdf5
+  val/
+    val.hdf5
+  test/
+    test.hdf5
+```
+
+### Training Motion Policy Networks
+
+Once you have the data, either by generating the dataset or by downloading
+ours, you can train the model using [run_training.py](mpinets/run_training.py).
+This script expects a configuration file and we provide a sample at
+[jobconfig.yaml](jobconfig.jaml). Look through this configuration file and
+modify the necessary paths before training.
+
+Then, to run training, use:
+```
+python3 mpinets/run_training.py jobconfig.yaml
+```
+We use Weights and Biases for logging training jobs, but you can disable this
+logger using:
+```
+python3 mpinets/run_training.py jobconfig.yaml --no-logging
+```
 ## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+We plan to open source this with the MIT license
