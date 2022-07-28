@@ -1,7 +1,7 @@
 # Motion Policy Networks
 This is repo has the expert data generation infrastructure and Pytorch implementation of [MPiNets](https://mpinets.github.io/).
 
-<img src="assets/readme1.gif" width="256" height="256" title="readme1">  |  <img src="assets/readme2.gif" width="256" height="256" title="readme2">
+<img src="assets/readme1.gif" width="256" height="172" title="readme1">  |  <img src="assets/readme2.gif" width="256" height="172" title="readme2">
 
 ## Installation
 The easiest way to install the code here is to build the attached docker container. We use Docker for several reasons:
