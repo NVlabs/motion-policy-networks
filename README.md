@@ -1,4 +1,7 @@
 # Motion Policy Networks
+This is repo has the expert data generation infrastructure and Pytorch implementation of [MPiNets](https://mpinets.github.io/).
+
+<img src="assets/readme1.gif" width="256" height="256" title="readme1">  |  <img src="assets/readme2.gif" width="256" height="256" title="readme2">
 
 ## Installation
 The easiest way to install the code here is to build the attached docker container. We use Docker for several reasons:
@@ -38,7 +41,7 @@ Navigate inside the repo (e.g. `cd motion-policy-networks`) and build the docker
 docker build --tag mpinets --network=host --file docker/Dockerfile .
 ```
 After this is built, you should be able to launch the docker using this command
-(be sure to use the correct paths on your system)
+(be sure to use the correct paths on your system for the `/PATH/TO/THE/REPO` arg)
 ```
 docker run --interactive --tty --rm --gpus all --network host --env DISPLAY=unix$DISPLAY --env XAUTHORITY --env NVIDIA_DRIVER_CAPABILITIES=all --env "ACCEPT_EULA=Y" --volume /PATH/TO/THE/REPO:/root/mpinets mpinets /bin/bash -c 'export PYTHONPATH=/root/mpinets:$PYTHONPATH; /bin/bash'
 ```
@@ -165,4 +168,13 @@ logger using:
 python3 mpinets/run_training.py jobconfig.yaml --no-logging
 ```
 ## License
-We plan to open source this with the MIT license
+This work is released with the MIT License.
+
+## Citation
+If you find this work useful in your research, please cite:
+
+	@inproceedings{fishman2022mpinets,
+	  title={Motion Policy Networks},
+	  author={Fishman, Adam and Murali, Adithyavairavan and Eppner, Clemens and Peele, Bryan and Boots, Byron and Fox, Dieter},
+	  year={2022}
+	}
