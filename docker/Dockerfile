@@ -106,6 +106,7 @@ RUN python3 -m pip install --upgrade pip setuptools \
     shapely \
     rtree \
     triangle \
+    termcolor \
     git+https://github.com/fishbotics/pointnet2_ops.git@main \
   && python3 -m pip install git+https://github.com/fishbotics/robofin.git@v0.0.1 git+https://github.com/fishbotics/atob@v0.0.1
 
