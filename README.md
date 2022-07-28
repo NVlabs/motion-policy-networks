@@ -1,5 +1,5 @@
 # Motion Policy Networks
-This is repo has the expert data generation infrastructure and Pytorch implementation of [MPiNets](https://mpinets.github.io/).
+This repo has the expert data generation infrastructure and Pytorch implementation of [MPiNets](https://mpinets.github.io/).
 
 <img src="assets/readme1.gif" width="256" height="172" title="readme1">  |  <img src="assets/readme2.gif" width="256" height="172" title="readme2">
 
@@ -8,9 +8,9 @@ The easiest way to install the code here is to build the attached docker contain
 
 1. For the data generation pipeline, many of our dependencies cannot be
    installed easily via PyPI
-   - OMPL requires a lot of system dependencies and then building from source
-   - Geometric Fabrics are not open source, but are included with Nvidia
-     Omniverse.
+   - [OMPL](https://ompl.kavrakilab.org/) requires a lot of system dependencies and then building from source
+   - [Geometric Fabrics](https://sites.google.com/nvidia.com/geometric-fabrics) are not open source, but are included with [Nvidia
+     Omniverse](https://www.nvidia.com/en-us/omniverse/).
 2. Docker makes it easy to manage the entire system environment, e.g. the CUDA
    runtime, the various upstream dependencies, etc.
 
