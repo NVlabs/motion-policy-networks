@@ -43,7 +43,7 @@ docker build --tag mpinets --network=host --file docker/Dockerfile .
 After this is built, you should be able to launch the docker using this command
 (be sure to use the correct paths on your system for the `/PATH/TO/THE/REPO` arg)
 ```
-docker run --interactive --tty --rm --gpus all --network host --env DISPLAY=unix$DISPLAY --env XAUTHORITY --env NVIDIA_DRIVER_CAPABILITIES=all --env "ACCEPT_EULA=Y" --volume /PATH/TO/THE/REPO:/root/mpinets mpinets /bin/bash -c 'export PYTHONPATH=/root/mpinets:$PYTHONPATH; /bin/bash'
+docker run --interactive --tty --rm --gpus all --network host --env DISPLAY=unix$DISPLAY --env XAUTHORITY --env NVIDIA_DRIVER_CAPABILITIES=all --env "ACCEPT_EULA=Y" --volume /PATH/TO/THE/REPO:/root/mpinets mpinets /bin/bash -c 'export PYTHONPATH=/root/mpinets:$PYTHONPATH; git config --global --add safe.directory /root/mpinets; /bin/bash'
 ```
 In order to run any GUI-based code in the docker, be sure to add the correct
 user to `xhost` on the host machine. You can do this by running `xhost
