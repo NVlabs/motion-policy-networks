@@ -114,20 +114,20 @@ class TrainingMotionPolicyNetwork(MotionPolicyNetwork):
         Rolls out the policy an arbitrary length by calling it iteratively
 
         :param batch Dict[str, torch.Tensor]: A data batch coming from the
-                                                   data loader--should already be
-                                                   on the correct device
+                                              data loader--should already be
+                                              on the correct device
         :param rollout_length int: The number of steps to roll out (not including the start)
         :param sampler Callable[[torch.Tensor], torch.Tensor]: A function that takes a batch of robot
-                                                                         configurations [B x 7] and returns a batch of
-                                                                         point clouds samples on the surface of that robot
+                                                               configurations [B x 7] and returns a batch of
+                                                               point clouds samples on the surface of that robot
         :param unnormalize bool: Whether to return the whole trajectory unnormalized
                                  (i.e. converted back into joint space)
         :rtype List[torch.Tensor]: The entire trajectory batch, i.e. a list of
-                                        configuration batches including the starting
-                                        configurations where each element in the list
-                                        corresponds to a timestep. For example, the
-                                        first element of each batch in the list would
-                                        be a single trajectory.
+                                   configuration batches including the starting
+                                   configurations where each element in the list
+                                   corresponds to a timestep. For example, the
+                                   first element of each batch in the list would
+                                   be a single trajectory.
         """
         xyz, q = (
             batch["xyz"],
