@@ -7,7 +7,6 @@ import pytorch_lightning as pl
 from pytorch_lightning.loggers import WandbLogger
 from pytorch_lightning.strategies import DDPStrategy
 from pytorch_lightning.callbacks import ModelCheckpoint, Callback
-import git
 from termcolor import colored
 import argparse
 import yaml
@@ -22,7 +21,6 @@ from mpinets.model import TrainingMotionPolicyNetwork
 def setup_trainer(
     gpus: int,
     test: bool,
-    should_log: bool,
     should_checkpoint: bool,
     logger: Optional[WandbLogger],
     checkpoint_interval: int,
@@ -34,9 +32,8 @@ def setup_trainer(
 
     :param gpus int: The number of GPUs (if more than 1, uses DDP)
     :param test bool: Whether to use a test dataset
-    :param should_log bool: Whether to log to Weights and Biases
     :param should_checkpoint bool: Whether to save checkpoints
-    :param logger Optional[WandbLogger]: The logger object
+    :param logger Optional[WandbLogger]: The logger object, set to None if logging is disabled
     :param checkpoint_interval int: The number of minutes between checkpoints
     :param checkpoint_dir str: The directory in which to save checkpoints (a subdirectory will
                                be created according to the experiment ID)
@@ -59,8 +56,7 @@ def setup_trainer(
     if validation_interval is not None:
         args = {**args, "val_check_interval": validation_interval}
     callbacks: List[Callback] = []
-    if should_log:
-        assert logger is not None, "If should_log is True, logger should not be None"
+    if logger is not None:
         experiment_id = str(logger.experiment.id)
     else:
         experiment_id = str(uuid.uuid1())
@@ -86,7 +82,7 @@ def setup_trainer(
         callbacks.extend([every_n_checkpoint, epoch_end_checkpoint])
 
     trainer = pl.Trainer(
-        enable_checkpointing=should_log,
+        enable_checkpointing=should_checkpoint,
         callbacks=callbacks,
         max_epochs=1 if test else 500,
         gradient_clip_val=1.0,
@@ -113,39 +109,6 @@ def setup_logger(
     return logger
 
 
-def check_for_uncommitted_changes():
-    """
-    Checks whether this repo has uncommitted changes
-
-    :raises Exception: Raises when there are uncommitted changes
-    """
-    repo = git.Repo(search_parent_directories=True)
-    if repo.is_dirty(untracked_files=False):
-        raise Exception(
-            "Uncommitted changes found in local git repo. "
-            "Commit all changes before running experiments "
-            "to maintain reproducibility."
-        )
-
-
-def confirm_allow_dirty_repo() -> bool:
-    """
-    Ask user to enter Y or N (case-insensitive).
-    Code is borrowed from here:
-        https://gist.github.com/gurunars/4470c97c916e7b3c4731469c69671d06
-    :rtype bool: True if the answer is either y or yes (regardless of capitalization).
-    """
-    answer = ""
-    message = (
-        "you have set --allow-dirty-repo which will run an experiment with"
-        " uncommitted changes. This will forcibly disable logging, as logged"
-        " experiments should be reproducible. Do you wish to continue? [y/n] "
-    )
-    while answer not in ["y", "yes", "n", "no"]:
-        answer = input(colored("Warning:", "red") + message).lower()
-    return answer in ["y", "yes"]
-
-
 def parse_args_and_configuration():
     """
     Checks the command line arguments and merges them with the configuration yaml file
@@ -155,7 +118,7 @@ def parse_args_and_configuration():
     parser.add_argument(
         "--test",
         action="store_true",
-        help="Allow dirty repo and test with only a few batches (disables logging)",
+        help="Test with only a few batches (disables logging)",
     )
     parser.add_argument(
         "--no-logging", action="store_true", help="Don't log to weights and biases"
@@ -163,19 +126,10 @@ def parse_args_and_configuration():
     parser.add_argument(
         "--no-checkpointing", action="store_true", help="Don't checkpoint"
     )
-    parser.add_argument(
-        "--allow-dirty-repo",
-        action="store_true",
-        help="Run with uncommitted changes (disables logging)",
-    )
     args = parser.parse_args()
 
     if args.test:
         args.no_logging = True
-    elif args.allow_dirty_repo and confirm_allow_dirty_repo():
-        args.no_logging = True
-    else:
-        check_for_uncommitted_changes()
 
     with open(args.yaml_config) as f:
         configuration = yaml.safe_load(f)
@@ -204,7 +158,6 @@ def run():
     trainer = setup_trainer(
         config["gpus"],
         config["test"],
-        should_log=not config["no_logging"],
         should_checkpoint=not config["no_checkpointing"],
         logger=logger,
         checkpoint_interval=config["checkpoint_interval"],
