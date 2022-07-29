@@ -92,7 +92,6 @@ RUN python3 -m pip install --upgrade pip setuptools \
     torch torchvision --extra-index-url https://download.pytorch.org/whl/cu113 \
     pytorch_lightning \
     h5py \
-    GitPython \
     trimesh \
     wandb \
     ipython \
