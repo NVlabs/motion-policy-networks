@@ -63,7 +63,7 @@ def setup_trainer(
         assert logger is not None, "If should_log is True, logger should not be None"
         experiment_id = str(logger.experiment.id)
     else:
-        experiment_id = uuid.uuid1()
+        experiment_id = str(uuid.uuid1())
     if should_checkpoint:
         if checkpoint_dir is not None:
             dirpath = Path(checkpoint_dir).resolve() / experiment_id
@@ -120,7 +120,7 @@ def check_for_uncommitted_changes():
     :raises Exception: Raises when there are uncommitted changes
     """
     repo = git.Repo(search_parent_directories=True)
-    if repo.is_dirty(untracked_files=True):
+    if repo.is_dirty(untracked_files=False):
         raise Exception(
             "Uncommitted changes found in local git repo. "
             "Commit all changes before running experiments "
