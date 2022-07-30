@@ -6,7 +6,6 @@ data_module_parameters:
   trajectory_key: 'hybrid_solutions' # Could also use 'global_solutions' for the global expert
   num_obstacle_points: 4096
   num_target_points: 128
-  num_workers: 80
   random_scale: 0.015
 shared_parameters:
     num_robot_points: 2048

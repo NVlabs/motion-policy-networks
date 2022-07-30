@@ -1,6 +1,7 @@
 from pathlib import Path
-from typing import Optional, Any, List, Union, Dict
+from typing import Optional, List, Union, Dict
 import enum
+import os
 
 from torch.utils.data import Dataset, DataLoader, random_split
 import h5py
@@ -402,7 +403,6 @@ class DataModule(pl.LightningDataModule):
         num_robot_points: int,
         num_obstacle_points: int,
         num_target_points: int,
-        num_workers: int,
         random_scale: float,
         batch_size: int,
     ):
@@ -414,8 +414,6 @@ class DataModule(pl.LightningDataModule):
         :param num_obstacle_points int: The number of points to sample from the obstacles
         :param num_target_points int: The number of points to sample from the target
                                       robot end effector
-        :param num_workers int: The number of parallel processes to use when loading data.
-                                This should match the number of cores.
         :param random_scale float: The standard deviation of the random normal
                                    noise to apply to the joints during training.
         :param batch_size int: The batch size
@@ -427,7 +425,7 @@ class DataModule(pl.LightningDataModule):
         self.num_robot_points = num_robot_points
         self.num_obstacle_points = num_obstacle_points
         self.num_target_points = num_target_points
-        self.num_workers = num_workers
+        self.num_workers = os.cpu_count()
         self.random_scale = random_scale
 
     def setup(self, stage: Optional[str] = None):
