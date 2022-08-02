@@ -249,9 +249,20 @@ ln -s /root/mpinets/interactive_demo/mpinets_ros mpinets_ros
 ln -s /root/mpinets/interactive_demo/mpinets_msgs mpinets_msgs
 catkin build && source devel/setup.bash
 ```
-Next, you can run the demo with the following command
-```ros
-roslaunch mpinets_ros visualize.launch mdl_path:=/PATH/TO/CHECKPOINT
+Next, you will need to split the terminal in two. You can do this with `tmux`
+(which is already installed in the Docker). If you are unfamiliar with tmux,
+you can open a second terminal on your host machine and run the docker there as well.
+These two docker instances share your host machines networking stack and can
+communicate with each other. If you go this route, use the first window (i.e.
+the one where you ran the steps above) for the launch file (explained below) and the second
+window to run `roscore`.
+
+In the second terminal, run `roscore` to start the ros process.
+
+In the first terminal (i.e. the one where you ran the commands above
+originally), run the following:
+```
+source /root/catkin_wsroslaunch mpinets_ros visualize.launch mdl_path:=/PATH/TO/CHECKPOINT
 point_cloud_path:=/PATH/TO/INTERACTIVE/DATA
 ```
 This will bring up Rviz and an environment with a tabletop, a robot, a floating
