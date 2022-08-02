@@ -363,7 +363,6 @@ class MPiNetsInterface:
         :param feedback InteractiveMarkerFeedback: The feedback from interacting with the
                                                    reset button
         """
-        print(type(feedback))
         if feedback.event_type == InteractiveMarkerFeedback.BUTTON_CLICK:
             rospy.loginfo("Resetting robot to neutral pose")
             self.reset_franka()
