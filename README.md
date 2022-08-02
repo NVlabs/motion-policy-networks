@@ -245,8 +245,8 @@ docker
 ```mkdi
 mkdir -p /root/catkin_ws/src
 cd /root/catkin_ws
-ln -s /root/mpinets/interactive_demo/mpinets_ros mpinets_ros
-ln -s /root/mpinets/interactive_demo/mpinets_msgs mpinets_msgs
+ln -s /root/mpinets/interactive_demo/mpinets_ros src/mpinets_ros
+ln -s /root/mpinets/interactive_demo/mpinets_msgs src/mpinets_msgs
 catkin build && source devel/setup.bash
 ```
 Next, you will need to split the terminal in two. You can do this with `tmux`
@@ -262,8 +262,8 @@ In the second terminal, run `roscore` to start the ros process.
 In the first terminal (i.e. the one where you ran the commands above
 originally), run the following:
 ```
-source /root/catkin_wsroslaunch mpinets_ros visualize.launch mdl_path:=/PATH/TO/CHECKPOINT
-point_cloud_path:=/PATH/TO/INTERACTIVE/DATA
+source /root/catkin_ws/devel/setup.bash
+roslaunch mpinets_ros visualize.launch mdl_path:=/PATH/TO/CHECKPOINT point_cloud_path:=/PATH/TO/INTERACTIVE/DATA
 ```
 This will bring up Rviz and an environment with a tabletop, a robot, a floating
 gripper, and some blocks. The floating gripper allows you to set the target for
