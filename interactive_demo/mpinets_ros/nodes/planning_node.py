@@ -55,7 +55,7 @@ class Planner:
     @torch.no_grad()
     def plan(
         self, q0: np.ndarray, target_pose: SE3, obstacle_pc: np.ndarray
-    ) -> List[List[float]]:
+    ) -> Tuple[bool, List[List[float]]]:
         """
         Creates a trajectory rollout toward the target. Will give up after MAX_ROLLOUT_LENGTH
         prediction steps
@@ -80,9 +80,9 @@ class Planner:
         assert np.all(
             q0 <= FrankaRealRobot.JOINT_LIMITS[:, 1]
         ), "Configuration is outside of feasible limits"
-        q0 = torch.as_tensor(q0).cuda().unsqueeze(0).float()
-        robot_points = self.fk_sampler.sample(q0, NUM_ROBOT_POINTS)
-        xyz = torch.cat(
+        q = torch.as_tensor(q0).cuda().unsqueeze(0).float()
+        robot_points = self.fk_sampler.sample(q, NUM_ROBOT_POINTS)
+        point_cloud = torch.cat(
             (
                 torch.zeros(NUM_ROBOT_POINTS, 4),
                 torch.ones(NUM_OBSTACLE_POINTS, 4),
@@ -90,26 +90,26 @@ class Planner:
             ),
             dim=0,
         ).cuda()
-        xyz[:NUM_ROBOT_POINTS, :3] = robot_points.float()
-        xyz[
+        point_cloud[:NUM_ROBOT_POINTS, :3] = robot_points.float()
+        point_cloud[
             NUM_ROBOT_POINTS : NUM_ROBOT_POINTS + NUM_OBSTACLE_POINTS, :3
         ] = obstacle_points.float()
-        xyz[NUM_ROBOT_POINTS + NUM_OBSTACLE_POINTS :, :3] = target_points.float()
-        xyz = xyz.unsqueeze(0)
+        point_cloud[
+            NUM_ROBOT_POINTS + NUM_OBSTACLE_POINTS :, :3
+        ] = target_points.float()
+        point_cloud = point_cloud.unsqueeze(0)
 
-        trajectory = [q0]
-        q = normalize_franka_joints(q0)
-        total_computation_time = 0.0
+        trajectory = [q]
+        q_norm = normalize_franka_joints(q)
         success = False
         for _ in range(MAX_ROLLOUT_LENGTH):
             step_start = time.time()
-            q = torch.clamp(q + self.mdl(xyz, q), min=-1, max=1)
-            q_unnorm = unnormalize_franka_joints(q).type_as(q)
-            step_time = time.time() - step_start
-            total_computation_time += step_time
-            trajectory.append(q_unnorm)
+            q_norm = torch.clamp(q_norm + self.mdl(point_cloud, q_norm), min=-1, max=1)
+            qt = unnormalize_franka_joints(q_norm).type_as(q)
+            assert isinstance(qt, torch.Tensor)
+            trajectory.append(qt)
             eff_pose = FrankaRealRobot.fk(
-                q_unnorm.squeeze().detach().cpu().numpy(), eff_frame="right_gripper"
+                qt.squeeze().detach().cpu().numpy(), eff_frame="right_gripper"
             )
             # [TUNE] This is where the 'success' is defined.
             # Feel free to change this.
@@ -124,8 +124,8 @@ class Planner:
             ):
                 success = True
                 break
-            robot_points = self.fk_sampler.sample(q_unnorm, NUM_ROBOT_POINTS)
-            xyz[:, :NUM_ROBOT_POINTS, :3] = robot_points
+            robot_points = self.fk_sampler.sample(qt, NUM_ROBOT_POINTS)
+            point_cloud[:, :NUM_ROBOT_POINTS, :3] = robot_points
         return success, [q.squeeze().cpu().numpy().tolist() for q in trajectory]
 
 
@@ -306,6 +306,7 @@ class PlanningNode:
         if self.planner is None:
             rospy.logwarn("Model is not yet loaded and planner cannot yet be called")
             return
+        rospy.loginfo(f"Attempting to plan")
         success, plan = self.planner.plan(q0, target, scene_pc)
         rospy.loginfo(f"Planning succeeded: {success}")
         joint_trajectory = JointTrajectory()

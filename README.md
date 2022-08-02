@@ -220,6 +220,48 @@ To see all of the options available, run
 ```
 python3 mpinets/run_inference.py --help
 ```
+### Interactive Demo Using ROS
+
+In addition to the inference scripts described above, we also provide a way to
+run the network interactively in order to play around with it using real-world
+data. This demo requires ROS, which is included in the Dockerfile.
+
+In order to run this demo, first download the real-world data. This data comes
+in a separate format from the inference problems above. [You can download this
+data here.]()
+Just as in the inference examples, you will also need a model checkpoint as well. You can
+train your own or use our pretrained checkpoint (see the section on inference
+for the link). After downloading these files, place them somewhere accessible
+to the docker.
+
+Upon launching the docker, you will first need to create a catkin workspace and
+place the relevant packages in the `src` directory. You can move the
+directories into the `src` folder or, even better, you can create symbolic
+links. The advantage of symbolic links is that you can still maintain the same
+developer workflow suggested above (edit on host machine, run in docker)
+because you haven't actually moved the directories out of the git repo.
+Finally, you must build and source the repo. To do so, run the following in the
+docker
+```mkdi
+mkdir -p /root/catkin_ws/src
+cd /root/catkin_ws
+ln -s /root/mpinets/interactive_demo/mpinets_ros mpinets_ros
+ln -s /root/mpinets/interactive_demo/mpinets_msgs mpinets_msgs
+catkin build && source devel/setup.bash
+```
+Next, you can run the demo with the following command
+```ros
+roslaunch mpinets_ros visualize.launch mdl_path:=/PATH/TO/CHECKPOINT
+point_cloud_path:=/PATH/TO/INTERACTIVE/DATA
+```
+This will bring up Rviz and an environment with a tabletop, a robot, a floating
+gripper, and some blocks. The floating gripper allows you to set the target for
+the policy. The blocks are buttons. Click on the red box to reset the demo, the
+yellow box to plan a path to the currently set target, and the green button to
+execute. After planning, you will see a semi-transparent robot looping over the
+plan to show you what it looks like. The opaque robot is the "real" robot and
+will move only when you click execute.
+
 ## License
 This work is released with the MIT License.
 
