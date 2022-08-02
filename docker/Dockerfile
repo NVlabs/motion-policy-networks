@@ -13,7 +13,8 @@ RUN echo "deb http://archive.ubuntu.com/ubuntu/ bionic main restricted" > /etc/a
   && echo "deb http://security.ubuntu.com/ubuntu bionic-security multiverse" >> /etc/apt/sources.list \
   && rm ~/.pip/pip.conf
 
-# # Install apt dependencies necessary for OMPL
+# Section 1. Data Generation Tools
+# Install apt dependencies necessary for OMPL
 RUN apt update \
   && apt install -y --no-install-recommends \
     g++ \
@@ -53,6 +54,7 @@ RUN /isaac-sim/kit/python/bin/python3 -m pip install -vU https://github.com/Cast
 ENV PYTHONPATH=/isaac-sim/exts/omni.isaac.lula/pip_prebundle/
 ENV PATH="/isaac-sim/kit/python/bin:${PATH}"
 
+# Section 2. Install Learning Tools (Cuda, Python Dependencies)
 # Install cuda 11.3 (this should be upgraded if Pytorch is also upgraded)
 RUN wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu1804/x86_64/cuda-keyring_1.0-1_all.deb \
   && dpkg -i cuda-keyring_1.0-1_all.deb \
@@ -84,7 +86,7 @@ ENV LD_LIBRARY_PATH /usr/local/nvidia/lib:/usr/local/nvidia/lib64:${LD_LIBRARY_P
 RUN apt-mark hold libcublas-11-3 libnccl2 libcublas-dev-11-3 libnccl-dev
 
 
-# # Alias the system Python to the Kit Python and install dependencies
+# Install Python dependencies for Motion Policy Networks
 # For some reason, the ikfast dependency do not get properly installed if
 # ikfast and robofin are in the same pip install statement
 RUN python3 -m pip install --upgrade pip setuptools \
@@ -110,5 +112,38 @@ RUN python3 -m pip install --upgrade pip setuptools \
     git+https://github.com/fishbotics/pointnet2_ops.git@main \
   && python3 -m pip install git+https://github.com/fishbotics/robofin.git@v0.0.1 git+https://github.com/fishbotics/atob@v0.0.1
 
+# Section 3. Install ROS dependencies for the interactive tutorial
+RUN ln -fs /usr/share/zoneinfo/America/Los_Angeles /etc/localtime \
+  && echo "America/Los_Angeles" > /etc/timezone \
+  && apt update \
+  && apt install -y --no-install-recommends \
+  curl \
+  tmux \
+  gnupg \
+  && apt-get clean \
+  && rm -rf /var/lib/apt \
+  && sh -c 'echo "deb http://packages.ros.org/ros/ubuntu bionic main" > /etc/apt/sources.list.d/ros-latest.list' \
+  && curl -s https://raw.githubusercontent.com/ros/rosdistro/master/ros.asc | apt-key add - \
+  && apt update && apt install -y --no-install-recommends \
+    ros-melodic-desktop-full \
+    python-rosdep \
+    python-rosinstall \
+    python-rosinstall-generator \
+    python-wstool \
+    ros-melodic-catkin \
+    python-catkin-tools \
+    ros-melodic-moveit \
+    ros-melodic-moveit-python \
+    ros-melodic-franka-ros \
+    ros-melodic-tf2-ros \
+    python3-rospkg-modules \
+    python3-catkin-pkg-modules \
+  && apt-get clean \
+  && rm -rf /var/lib/apt \
+  && echo "source /opt/ros/melodic/setup.bash" >> ~/.bashrc \
+  && rosdep init && rosdep update \
+  && python3 -m pip install rospkg
+
+# Section 4. Final setup items
 WORKDIR /root
 ENTRYPOINT []
