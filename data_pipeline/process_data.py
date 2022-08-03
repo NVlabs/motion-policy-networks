@@ -19,21 +19,21 @@ def merge_files(files: List[Path], output_file: str):
     max_cuboids = 0
     max_cylinders = 0
     for fn in tqdm(files):
-        with h5py.File(str(fn)) as g:
-            N += len(g["global_solutions"])
-            if "cuboid_centers" in g.keys():
-                max_cuboids = max(max_cuboids, g["cuboid_centers"].shape[1])
-            if "cylinder_centers" in g.keys():
-                max_cylinders = max(max_cylinders, g["cylinder_centers"].shape[1])
-    with h5py.File(output_file, "w-") as f:
-        with h5py.File(str(files[0])) as g:
-            for k in g.keys():
+        with h5py.File(str(fn)) as f:
+            N += len(f["global_solutions"])
+            if "cuboid_centers" in f.keys():
+                max_cuboids = max(max_cuboids, f["cuboid_centers"].shape[1])
+            if "cylinder_centers" in f.keys():
+                max_cylinders = max(max_cylinders, f["cylinder_centers"].shape[1])
+    with h5py.File(output_file, "w-") as g:
+        with h5py.File(str(files[0])) as f:
+            for k in f.keys():
                 if "cuboid" in k:
-                    f.create_dataset(k, (N, max_cuboids, g[k].shape[2]))
+                    g.create_dataset(k, (N, max_cuboids, f[k].shape[2]))
                 elif "cylinder" in k:
-                    f.create_dataset(k, (N, max_cylinders, g[k].shape[2]))
+                    g.create_dataset(k, (N, max_cylinders, f[k].shape[2]))
                 else:
-                    f.create_dataset(k, (N, *g[k].shape[1:]))
+                    g.create_dataset(k, (N, *f[k].shape[1:]))
         idx = 0
         for fn in tqdm(files):
             with h5py.File(str(fn)) as f:
