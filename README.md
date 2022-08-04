@@ -229,7 +229,7 @@ python3 mpinets/run_inference.py --help
 ```
 ### Interactive Demo Using ROS
 
-<img src="assets/readme1.gif" width="640" height="480" title="rviz_gui">
+<img src="assets/rviz_gui.gif" width="640" height="480" title="rviz_gui">
 
 In addition to the inference scripts described above, we also provide a way to
 run the network interactively in order to play around with it using real-world
