@@ -1,7 +1,7 @@
 # Motion Policy Networks
 This repo has the expert data generation infrastructure and Pytorch implementation of [MPiNets](https://mpinets.github.io/).
 
-<img src="assets/readme1.gif" width="256" height="172" title="readme1">  |  <img src="assets/readme2.gif" width="256" height="172" title="readme2">
+<img src="assets/readme1.gif" width="256" height="172" title="readme1">  <img src="assets/readme2.gif" width="256" height="172" title="readme2"> <img src="assets/readme3.gif" width="256" height="172" title="readme3">
 
 ## Installation
 The easiest way to install the code here is to build our included docker container,
@@ -228,6 +228,8 @@ To see all of the options available, run
 python3 mpinets/run_inference.py --help
 ```
 ### Interactive Demo Using ROS
+
+<img src="assets/readme1.gif" width="640" height="480" title="rviz_gui">
 
 In addition to the inference scripts described above, we also provide a way to
 run the network interactively in order to play around with it using real-world
