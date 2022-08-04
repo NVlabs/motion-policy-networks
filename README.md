@@ -100,7 +100,7 @@ To run the a similar visualization test where the trajectories all start or end
 with a collision-free neutral pose, you can use
 ```
 cd /root/mpinets/data_pipeline
-python3 gen_data.py dresser test-environment --neutral
+python3 gen_data.py dresser --neutral test-environment
 ```
 To test the data pipeline (i.e. including how the data is saved on disk)
 and generate a small dataset within randomized tabletop environments using
@@ -115,7 +115,7 @@ ends with a neutral configuration.
 ```
 cd /root/mpinets/data_pipeline
 mkdir -p data/cubby/neutral/1
-python3 gen_data.py cubby full-pipeline /root/mpinets/data_pipeline/data/cubby/neutral/1/ --neutral
+python3 gen_data.py cubby --neutral full-pipeline /root/mpinets/data_pipeline/data/cubby/neutral/1/
 ```
 
 ### Data Cleaning
