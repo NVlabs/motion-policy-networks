@@ -7,16 +7,16 @@ This repo has the expert data generation infrastructure and Pytorch implementati
 The easiest way to install the code here is to build our included docker container,
 which contains all of the dependencies for data generation, model training,
 inference, and a ROS-based interactive demo. Due to the many components, this
-container will require ~30gb when built.
+container will require `~30gb` when built.
 Despite the sizeable storage requirements, we use Docker for several reasons:
 
 1. For the data generation pipeline, many of our dependencies cannot be
    installed easily via PyPI
    - [OMPL](https://ompl.kavrakilab.org/) requires a lot of system dependencies and then building from source
-   - [Geometric Fabrics](https://sites.google.com/nvidia.com/geometric-fabrics) are not open source, but are included with [Nvidia
-     Omniverse](https://www.nvidia.com/en-us/omniverse/).
+   - [Nvidia
+     Omniverse](https://www.nvidia.com/en-us/omniverse/) has the release of [Geometric Fabrics](https://sites.google.com/nvidia.com/geometric-fabrics) used in our expert generation.
 2. Docker makes it easy to manage the entire system environment, e.g. the CUDA
-   runtime, the various upstream dependencies, etc.
+   runtime, the various upstream dependencies, ROS, etc.
 
 If you have a strong need to build this repo on your host machine, you can follow the same steps as are outlined in the [Dockerfile](docker/Dockerfile). For example, if you are limited in disk space and, have your own expert data generation pipeline, or simply intend to use our publicly available datasets, you only need to install the learning dependencies (the different areas should be well-documented in the Dockerfile). Likewise, if you do not intend to use the interactive demo, you do not need to install the ROS dependencies.
 
@@ -40,7 +40,8 @@ To log in, use the command
 sudo docker login nvcr.io
 ```
 Next, clone this repo using:
-``` git clone https://gitlab-master.nvidia.com/srl/motion-policy-networks
+```
+git clone https://gitlab-master.nvidia.com/srl/motion-policy-networks
 ```
 Navigate inside the repo (e.g. `cd motion-policy-networks`) and build the docker with
 ```
@@ -251,7 +252,7 @@ developer workflow suggested above (edit on host machine, run in docker)
 because you haven't actually moved the directories out of the git repo.
 Finally, you must build and source the repo. To do so, run the following in the
 docker
-```mkdi
+```
 mkdir -p /root/catkin_ws/src
 cd /root/catkin_ws
 ln -s /root/mpinets/interactive_demo/mpinets_ros src/mpinets_ros
@@ -276,8 +277,7 @@ roslaunch mpinets_ros visualize.launch mdl_path:=/PATH/TO/CHECKPOINT point_cloud
 ```
 This will bring up Rviz and an environment with a tabletop, a robot, a floating
 gripper, and some blocks. The floating gripper allows you to set the target for
-the policy. The blocks are buttons. Click on the red box to reset the demo, the
-yellow box to plan a path to the currently set target, and the green button to
+the policy. The blocks are buttons. You will have to wait until the script says 'System Ready' before planning. Click on the red box to reset the demo, the yellow box to plan a path to the currently set target, and the green button to
 execute. After planning, you will see a semi-transparent robot looping over the
 plan to show you what it looks like. The opaque robot is the "real" robot and
 will move only when you click execute.
