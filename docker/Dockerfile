@@ -118,7 +118,6 @@ RUN ln -fs /usr/share/zoneinfo/America/Los_Angeles /etc/localtime \
   && apt update \
   && apt install -y --no-install-recommends \
   curl \
-  tmux \
   gnupg \
   && apt-get clean \
   && rm -rf /var/lib/apt \
@@ -142,7 +141,10 @@ RUN ln -fs /usr/share/zoneinfo/America/Los_Angeles /etc/localtime \
   && rm -rf /var/lib/apt \
   && echo "source /opt/ros/melodic/setup.bash" >> ~/.bashrc \
   && rosdep init && rosdep update \
-  && python3 -m pip install rospkg
+  && python3 -m pip install rospkg netifaces
+
+ENV ROS_HOSTNAME=localhost
+ENV ROS_MASTER_URI=http://localhost:11311
 
 # Section 4. Final setup items
 WORKDIR /root
