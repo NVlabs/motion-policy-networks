@@ -4,7 +4,11 @@ This repo has the expert data generation infrastructure and Pytorch implementati
 <img src="assets/readme1.gif" width="256" height="172" title="readme1">  |  <img src="assets/readme2.gif" width="256" height="172" title="readme2">
 
 ## Installation
-The easiest way to install the code here is to build the attached docker container. We use Docker for several reasons:
+The easiest way to install the code here is to build our included docker container,
+which contains all of the dependencies for data generation, model training,
+inference, and a ROS-based interactive demo. Due to the many components, this
+container will require ~30gb when built.
+Despite the sizeable storage requirements, we use Docker for several reasons:
 
 1. For the data generation pipeline, many of our dependencies cannot be
    installed easily via PyPI
@@ -14,7 +18,10 @@ The easiest way to install the code here is to build the attached docker contain
 2. Docker makes it easy to manage the entire system environment, e.g. the CUDA
    runtime, the various upstream dependencies, etc.
 
-If you have a strong need to build this repo on your host machine, you can follow the same steps as are outlined in the [Dockerfile](docker/Dockerfile). If you have your own expert data generation pipeline or intend to use our publicly available datasets, you only need to install the learning dependencies (the different areas should be well-documented in the Dockerfile). However, if you want to run the data generation pipeline, you will either need to download Nvidia Isaac Sim to get access to Geometric Fabrics or build the Docker container we include.
+If you have a strong need to build this repo on your host machine, you can follow the same steps as are outlined in the [Dockerfile](docker/Dockerfile). For example, if you are limited in disk space and, have your own expert data generation pipeline, or simply intend to use our publicly available datasets, you only need to install the learning dependencies (the different areas should be well-documented in the Dockerfile). Likewise, if you do not intend to use the interactive demo, you do not need to install the ROS dependencies.
+
+If you intend to run the data generation pipeline, you must use Isaac Sim to get access to Geometric Fabrics. Again, you can install this on
+your host machine, but we recommend using our included Dockerfile, which streamlines the installation process.
 
 In order to build the Docker container included in this repo, you will need access
 to the Isaac Sim docker container (our container is built on top of it). You can find detailed instructioned on how
