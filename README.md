@@ -3,7 +3,23 @@ This repo has the expert data generation infrastructure and Pytorch implementati
 
 <img src="assets/readme1.gif" width="256" height="172" title="readme1">  <img src="assets/readme2.gif" width="256" height="172" title="readme2"> <img src="assets/readme3.gif" width="256" height="172" title="readme3">
 
-## Contents
+Table of Contents
+=================
+
+* [Motion Policy Networks](#motion-policy-networks)
+   * [Contents](#contents)
+   * [Installation](#installation)
+   * [Usage](#usage)
+   * [Inference With Motion Policy Networks](#inference-with-motion-policy-networks)
+   * [Interactive Demo Using ROS](#interactive-demo-using-ros)
+   * [Training Motion Policy Networks](#training-motion-policy-networks)
+      * [Using our pregenerated data](#using-our-pregenerated-data)
+      * [Training the model](#training-the-model)
+   * [Data Generation](#data-generation)
+      * [Data Cleaning](#data-cleaning)
+   * [License](#license)
+   * [Citation](#citation)
+
 
 ## Installation
 The easiest way to install the code here is to build our included docker container,
