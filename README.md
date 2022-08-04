@@ -3,11 +3,9 @@ This repo has the expert data generation infrastructure and Pytorch implementati
 
 <img src="assets/readme1.gif" width="256" height="172" title="readme1">  <img src="assets/readme2.gif" width="256" height="172" title="readme2"> <img src="assets/readme3.gif" width="256" height="172" title="readme3">
 
-Table of Contents
-=================
+## Table of Contents
 
 * [Motion Policy Networks](#motion-policy-networks)
-   * [Contents](#contents)
    * [Installation](#installation)
    * [Usage](#usage)
    * [Inference With Motion Policy Networks](#inference-with-motion-policy-networks)
@@ -16,9 +14,11 @@ Table of Contents
       * [Using our pregenerated data](#using-our-pregenerated-data)
       * [Training the model](#training-the-model)
    * [Data Generation](#data-generation)
+      * [Generating Data for Individual Scene Types](#generating-data-for-individual-scene-types)
       * [Data Cleaning](#data-cleaning)
    * [License](#license)
    * [Citation](#citation)
+<!-- Created by https://github.com/ekalinin/github-markdown-toc -->
 
 
 ## Installation
@@ -218,7 +218,16 @@ to work in a cloud-based system, but generating a large dataset will require
 some data management. To generate the data in Motion Policy Networks, we used a
 cluster of 80 server nodes running these scripts in parallel.
 
-You can use [gen_data.py][data_pipeline/gen_data.py] to generate the data. This
+The scripts we provide are designed to preserve an even distribution of data in
+the dataset. Some environments are easier than others and therefore we can produce
+data more quickly. To ensure evenness, you will first generate data for each individual
+problem type, downsize the individual sets to match, and then merge them together.
+
+### Generating Data for Individual Scene Types
+
+You can use [gen_data.py](data_pipeline/gen_data.py) to generate data for a
+single type of environment and either between two task-oriented poses or
+between a neutral pose and a task-oriented one. This
 file should have a self-explanatory help string, which you can access with
 `data_pipeline/gen_data.py --help`.
 
