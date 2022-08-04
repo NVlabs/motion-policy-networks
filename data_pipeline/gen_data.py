@@ -177,8 +177,11 @@ def get_fabric_chunks(
     """
     poses = [lula.Pose3(p.matrix) for p in end_eff_plan]
 
-    # These are based on what's in NGC
-    fabric_urdf_path = str(Path(__file__).parent.resolve() / "config" / "franka.urdf")
+    # This path is hardcoded based on the path in the Docker
+    fabric_urdf_path = "/isaac-sim/exts/omni.isaac.motion_generation/motion_policy_configs/franka/lula_franka_gen.urdf"
+    assert Path(
+        fabric_urdf_path
+    ).exists(), "The hardcoded Isaac Sim URDF file does not exist (are you running this in the docker?)--replace with a valid path"
     fabric_robot_description_path = str(
         Path(__file__).parent.resolve() / "config" / "franka_robot_description.yaml"
     )
