@@ -115,7 +115,7 @@ class PlanningProblem:
 here.]()
 
 The inference script will simulate the rollout in PyBullet and visualize the
-perception with Meshcat. When you run the script, you the script will print URL
+perception with Meshcat. When you run the script, it will print a URL
 that you can visit in the browser on your host machine to view the point cloud
 of the scene.
 
@@ -124,16 +124,16 @@ to see visuals of the policy in a tabletop setting moving from a neutral pose
 to a task-oriented pose, run the following. Be sure to use the correct paths
 the checkpoint and test problems.
 ```
-python3 mpinets/run_inference.py /PATH/TO/CHECKPOINT.ckpt /PATH/TO/TEST/PROBLEMS.pkl tabletop neutral-start
+python3 mpinets/mpinets/run_inference.py /PATH/TO/corl_2022_hybrid_expert_checkpoint.ckpt /PATH/TO/sample_hybrid_solvable_problems.pkl tabletop neutral-start
 ```
 To see a set of task-oriented dresser problems
 ```
-python3 mpinets/run_inference.py /PATH/TO/CHECKPOINT.ckpt /PATH/TO/TEST/PROBLEMS.pkl tabletop neutral-start
+python3 mpinets/mpinets/run_inference.py /PATH/TO/corl_2022_hybrid_expert_checkpoint.ckpt /PATH/TO/sample_hybrid_solvable_problems.pkl dresser neutral-start
 ```
 
 To see all of the options available, run
 ```
-python3 mpinets/run_inference.py --help
+python3 mpinets/mpinets/run_inference.py --help
 ```
 ## Interactive Demo Using ROS
 
@@ -168,7 +168,7 @@ catkin build && source devel/setup.bash
 ```
 Next, you will need to run the launch file for the demo.
 ```or
-roslaunch mpinets_ros visualize.launch mdl_path:=/PATH/TO/CHECKPOINT point_cloud_path:=/PATH/TO/INTERACTIVE/DATA
+roslaunch mpinets_ros visualize.launch mdl_path:=/PATH/TO/corl_2022_hybrid_expert_checkpoint.ckpt point_cloud_path:=/PATH/TO/real_point_cloud_data.npy
 ```
 This will bring up Rviz and an environment with a tabletop, a robot, a floating
 gripper, and some blocks. The floating gripper allows you to set the target for
@@ -200,16 +200,16 @@ modify the necessary paths before training.
 
 Then, to run training, use:
 ```
-python3 mpinets/run_training.py jobconfig.yaml
+python3 mpinets/mpinets/run_training.py mpinets/jobconfig.yaml
 ```
 We use Weights and Biases for logging training jobs, but you can disable this
 logger using:
 ```
-python3 mpinets/run_training.py jobconfig.yaml --no-logging
+python3 mpinets/mpinets/run_training.py mpinets/jobconfig.yaml --no-logging
 
 ```
 There are a few other run-time flags, namely a test mode and a way to disable
-model checkpoints. Run `python3 mpinents/run_training.py --help` to learn more.
+model checkpoints. Run `python3 mpinets/mpinents/run_training.py --help` to learn more.
 
 ## Data Generation
 If you would like to generate the data yourself, we provide scripts we used to
@@ -229,7 +229,7 @@ You can use [gen_data.py](data_pipeline/gen_data.py) to generate data for a
 single type of environment and either between two task-oriented poses or
 between a neutral pose and a task-oriented one. This
 file should have a self-explanatory help string, which you can access with
-`data_pipeline/gen_data.py --help`.
+`mpinets/data_pipeline/gen_data.py --help`.
 
 Some examples of data generation:
 
