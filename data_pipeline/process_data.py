@@ -147,7 +147,7 @@ def downsize_and_split(
             size=train_size + test_size + val_size,
             replace=False,
         )
-        train_indices, test_indices, val_indices = (
+        train_indices, val_indices, test_indices = (
             np.sort(indices[:train_size]),
             np.sort(indices[train_size : train_size + val_size]),
             np.sort(indices[train_size + val_size :]),
