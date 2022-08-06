@@ -293,7 +293,7 @@ class PlanningNode:
                 msg.target.transform.translation.y,
                 msg.target.transform.translation.z,
             ],
-            quat=[
+            quaternion=[
                 msg.target.transform.rotation.w,
                 msg.target.transform.rotation.x,
                 msg.target.transform.rotation.y,

@@ -199,7 +199,7 @@ def convert_primitive_problems_to_depth(
     if "dresser" in environment_type:
         camera = SE3(
             xyz=[0.08307640315968651, 1.986952324350807, 0.9996085854670145],
-            quat=[
+            quaternion=[
                 -0.10162310189063647,
                 -0.06726290364234049,
                 0.5478233048853433,
@@ -209,7 +209,7 @@ def convert_primitive_problems_to_depth(
     elif "cubby" in environment_type:
         camera = SE3(
             xyz=[0.08307640315968651, 1.986952324350807, 0.9996085854670145],
-            quat=[
+            quaternion=[
                 -0.10162310189063647,
                 -0.06726290364234049,
                 0.5478233048853433,
@@ -219,7 +219,7 @@ def convert_primitive_problems_to_depth(
     elif "tabletop" in environment_type:
         camera = SE3(
             xyz=[1.5031788593125708, -1.817341016921562, 1.278088299149147],
-            quat=[
+            quaternion=[
                 0.8687241016192855,
                 0.4180885960330695,
                 0.11516106409944685,
