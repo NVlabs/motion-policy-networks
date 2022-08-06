@@ -109,22 +109,24 @@ class TorchCuboids:
     class, such as sdf).
     """
 
-    def __init__(self, centers: torch.Tensor, dims: torch.Tensor, quats: torch.Tensor):
+    def __init__(
+        self, centers: torch.Tensor, dims: torch.Tensor, quaternions: torch.Tensor
+    ):
         """
         :param centers torch.Tensor: Has dim [B, M, 3]
         :param dims torch.Tensor: Has dim [B, M, 3]
-        :param quats torch.Tensor: Has dim [B, M, 4] with quaternions formatted as
+        :param quaternions torch.Tensor: Has dim [B, M, 4] with quaternions formatted as
                                    w, x, y, z
         """
         assert centers.ndim == 3
         assert dims.ndim == 3
-        assert quats.ndim == 3
+        assert quaternions.ndim == 3
 
         self.dims = dims
         self.centers = centers
 
         # It's helpful to ensure the quaternions are normalized
-        self.quats = quats / torch.linalg.norm(quats, dim=2)[:, :, None]
+        self.quats = quaternions / torch.linalg.norm(quaternions, dim=2)[:, :, None]
 
         self._init_frames()
         # Mask for nonzero volumes
@@ -336,26 +338,26 @@ class TorchCylinders:
         centers: torch.Tensor,
         radii: torch.Tensor,
         heights: torch.Tensor,
-        quats: torch.Tensor,
+        quaternions: torch.Tensor,
     ):
         """
         :param centers torch.Tensor: Has dim [B, M, 3]
         :param radii torch.Tensor: Has dim [B, M, 1]
         :param heights torch.Tensor: Has dim [B, M, 1]
-        :param quats torch.Tensor: Has dim [B, M, 4] with quaternions formatted as
+        :param quaternions torch.Tensor: Has dim [B, M, 4] with quaternions formatted as
                                    (w, x, y, z)
         """
         assert centers.ndim == 3
         assert radii.ndim == 3
         assert heights.ndim == 3
-        assert quats.ndim == 3
+        assert quaternions.ndim == 3
 
         self.radii = radii
         self.heights = heights
         self.centers = centers
 
         # It's helpful to ensure the quaternions are normalized
-        self.quats = quats / torch.linalg.norm(quats, dim=2)[:, :, None]
+        self.quats = quaternions / torch.linalg.norm(quaternions, dim=2)[:, :, None]
         self._init_frames()
         # Mask for nonzero volumes
         self.mask = ~torch.logical_or(
