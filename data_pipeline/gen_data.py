@@ -178,9 +178,8 @@ def get_fabric_chunks(
     poses = [lula.Pose3(p.matrix) for p in end_eff_plan]
 
     # This path is hardcoded based on the path in the Docker
-    fabric_urdf_path = "/isaac-sim/exts/omni.isaac.motion_generation/motion_policy_configs/franka/lula_franka_gen.urdf"
     assert Path(
-        fabric_urdf_path
+        FABRIC_URDF_PATH
     ).exists(), "The hardcoded Isaac Sim URDF file does not exist (are you running this in the docker?)--replace with a valid path"
     fabric_robot_description_path = str(
         Path(__file__).parent.resolve() / "config" / "franka_robot_description.yaml"
@@ -190,7 +189,7 @@ def get_fabric_chunks(
     )
 
     # Load robot description
-    robot_description = lula.load_robot(fabric_robot_description_path, fabric_urdf_path)
+    robot_description = lula.load_robot(fabric_robot_description_path, FABRIC_URDF_PATH)
     fabric_state = lula.create_fabric_state()
 
     world = lula.create_world()
@@ -752,6 +751,9 @@ def gen():
 
 def visualize_single_env():
     env, results = gen_single_env_data()
+    if len(results) == 0:
+        print("Found no results")
+        return
     sim = Bullet(gui=True)
     robot = sim.load_robot(FrankaRobot)
     sim.load_primitives(env.obstacles)
@@ -786,6 +788,26 @@ if __name__ == "__main__":
         choices=["tabletop", "cubby", "merged_cubby", "dresser"],
         help="Include this argument if there are subtypes",
     )
+
+    parser.add_argument(
+        "--neutral",
+        action="store_true",
+        help=(
+            "If set, plans will always begin or end with a collision-free neutral pose."
+            " If not set, plans will always start and end with a task-oriented pose"
+        ),
+    )
+
+    parser.add_argument(
+        "--fabric-urdf",
+        type=str,
+        default="/isaac-sim/exts/omni.isaac.motion_generation/motion_policy_configs/franka/lula_franka_gen.urdf",
+        help=(
+            "This is the path to the URDF used by geometric fabrics. By default, it is set as the path"
+            " in the Isaac Sim Docker."
+        ),
+    )
+
     subparsers = parser.add_subparsers(
         help="Whether to run the full pipeline, the test pipeline, or an environment test",
         dest="run_type",
@@ -821,20 +843,14 @@ if __name__ == "__main__":
         help="Generates a few trajectories for a single environment and visualizes them with Pybullet",
     )
 
-    parser.add_argument(
-        "--neutral",
-        action="store_true",
-        help=(
-            "If set, plans will always begin or end with a collision-free neutral pose."
-            " If not set, plans will always start and end with a task-oriented pose"
-        ),
-    )
-
     args = parser.parse_args()
 
     # Used to tell all the various subprocesses whether to use neutral poses
     global IS_NEUTRAL
     IS_NEUTRAL = args.neutral
+
+    global FABRIC_URDF_PATH
+    FABRIC_URDF_PATH = args.fabric_urdf
 
     # Sets the env type
     global ENV_TYPE
@@ -843,7 +859,7 @@ if __name__ == "__main__":
     if args.run_type in ["test-pipeline", "test-environment"]:
         NUM_SCENES = 10  # The maximum number of scenes to generate in a single job
         NUM_PLANS_PER_SCENE = (
-            2  # The number of total candidate start or goals to use to plan experts
+            4  # The number of total candidate start or goals to use to plan experts
         )
     if args.run_type == "test-environment":
         visualize_single_env()
