@@ -99,17 +99,17 @@ RUN python3 -m pip install --upgrade pip setuptools \
     ipython \
     pybullet \
     pyquaternion \
-    geometrout \
+    geometrout==0.0.34 \
     ikfast-pybind  \
     tqdm \
-    urchin \
+    urchin==0.0.24 \
     yourdfpy \
     shapely \
     rtree \
     triangle \
     termcolor \
     meshcat \
-    git+https://github.com/fishbotics/pointnet2_ops.git@main \
+    git+https://github.com/fishbotics/pointnet2_ops.git@main@v3.2.0 \
   && python3 -m pip install git+https://github.com/fishbotics/robofin.git@v0.0.1 git+https://github.com/fishbotics/atob@v0.0.1
 
 # Section 3. Install ROS dependencies for the interactive tutorial
