@@ -13,14 +13,15 @@ from copy import deepcopy
 from pyquaternion import Quaternion
 
 from data_pipeline.environments.base_environment import (
-    Candidate,
+    TaskOrientedCandidate,
+    NeutralCandidate,
     Environment,
     radius_sample,
 )
 
 
 @dataclass
-class CubbyCandidate(Candidate):
+class CubbyCandidate(TaskOrientedCandidate):
     """
     Represents a configuration, its end-effector pose (in right_gripper frame), and
     some metadata about the cubby (i.e. which cubby pocket it belongs to and the free space
@@ -525,20 +526,20 @@ class CubbyEnvironment(Environment):
 
     def _gen_neutral_candidates(
         self, how_many: int, selfcc: FrankaSelfCollisionChecker
-    ) -> List[Candidate]:
+    ) -> List[NeutralCandidate]:
         """
         Generates a set of neutral candidates (all collision free)
 
         :param how_many int: How many to generate ideally--can be less if there are a lot of failures
         :param selfcc FrankaSelfCollisionChecker: Checks for self collisions using spheres that
                                                   mimic the internal Franka collision checker.
-        :rtype List[Candidate]: A list of neutral candidates
+        :rtype List[NeutralCandidate]: A list of neutral candidates
         """
         sim = Bullet(gui=False)
         gripper = sim.load_robot(FrankaGripper)
         arm = sim.load_robot(FrankaRobot)
         sim.load_primitives(self.obstacles)
-        candidates: List[Candidate] = []
+        candidates: List[NeutralCandidate] = []
         for _ in range(how_many * 50):
             if len(candidates) >= how_many:
                 break
@@ -552,22 +553,16 @@ class CubbyEnvironment(Environment):
                 gripper.marionette(pose)
                 if not sim.in_collision(gripper):
                     candidates.append(
-                        CubbyCandidate(
+                        NeutralCandidate(
                             config=sample,
-                            pocket_idx=-1,
                             pose=pose,
-                            support_volume=Cuboid(
-                                center=pose.xyz,
-                                dims=np.array([0.1, 0.1, 0.1]),
-                                quaternion=pose.so3.wxyz,
-                            ),
                         )
                     )
         return candidates
 
     def _gen_additional_candidate_sets(
         self, how_many: int, selfcc: FrankaSelfCollisionChecker
-    ) -> List[List[Candidate]]:
+    ) -> List[List[TaskOrientedCandidate]]:
         """
         Creates additional candidates, where the candidates correspond to the support volumes
         of the environment's generated candidates (created by the `gen` function)
@@ -576,7 +571,7 @@ class CubbyEnvironment(Environment):
                              to match this number or the function will run forever)
         :param selfcc FrankaSelfCollisionChecker: Checks for self collisions using spheres that
                                                   mimic the internal Franka collision checker.
-        :rtype List[List[Candidate]]: A pair of candidate sets, where each has `how_many`
+        :rtype List[List[TaskOrientedCandidate]]: A pair of candidate sets, where each has `how_many`
                                       candidates that matches the corresponding support volume
                                       for the respective element in `self.demo_candidates`
         """
@@ -588,7 +583,7 @@ class CubbyEnvironment(Environment):
         sim.load_primitives(self.obstacles)
 
         for idx, candidate in enumerate(self.demo_candidates):
-            candidate_set: List[Candidate] = []
+            candidate_set: List[TaskOrientedCandidate] = []
             ii = 0
             while ii < how_many:
                 pose, q = self.random_pose_and_config(

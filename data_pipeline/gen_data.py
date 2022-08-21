@@ -1,10 +1,9 @@
-"""
-"""
 import time
 import argparse
 import os
 import uuid
 import random
+import pickle
 import numpy as np
 from ompl.util import noOutputHandler
 from multiprocessing import Pool
@@ -22,11 +21,17 @@ from atob.planner import (
 import itertools
 from geometrout.primitive import Cuboid, Cylinder
 from geometrout.transform import SE3
+from termcolor import colored
 from dataclasses import dataclass, field
 import logging
 import lula
 from atob.trajectory import Trajectory
-from data_pipeline.environments.base_environment import Candidate, Environment
+from data_pipeline.environments.base_environment import (
+    Candidate,
+    TaskOrientedCandidate,
+    NeutralCandidate,
+    Environment,
+)
 from data_pipeline.environments.cubby_environment import (
     CubbyEnvironment,
     MergedCubbyEnvironment,
@@ -37,6 +42,9 @@ from data_pipeline.environments.dresser_environment import (
 from data_pipeline.environments.tabletop_environment import (
     TabletopEnvironment,
 )
+
+from mpinets.run_inference import PlanningProblem
+
 from typing import Tuple, List, Union, Sequence, Optional, Any
 
 # These are the current config parameters used throughout the script.
@@ -63,6 +71,8 @@ class Result:
     Describes an individual result from a single planning problem
     """
 
+    start_candidate: Candidate
+    target_candidate: Candidate
     error_codes: List[str] = field(default_factory=list)
     cuboids: List[Cuboid] = field(default_factory=list)
     cylinders: List[Cylinder] = field(default_factory=list)
@@ -424,11 +434,15 @@ def forward_backward(
         global_solution=global_forward,
         cuboids=cuboids,
         cylinders=cylinders,
+        start_candidate=candidate1,
+        target_candidate=candidate2,
     )
     backward_result = Result(
         global_solution=global_backward,
         cuboids=cuboids,
         cylinders=cylinders,
+        start_candidate=candidate2,
+        target_candidate=candidate1,
     )
     results = [forward_result, backward_result]
 
@@ -769,6 +783,143 @@ def visualize_single_env():
         time.sleep(0.2)
 
 
+def generate_task_oriented_inference_data(
+    expert_pipeline: str, how_many: int, save_path: str
+):
+    selfcc = FrankaSelfCollisionChecker()
+    inference_problems = []
+    with tqdm(total=how_many) as pbar:
+        while len(inference_problems) < how_many:
+            env, all_results = gen_single_env_data()
+            if len(all_results) == 0:
+                continue
+            if expert_pipeline == "global":
+                results = all_results
+            else:
+                results = [
+                    r for r in all_results if len(r.hybrid_solution) == SEQUENCE_LENGTH
+                ]
+                for r in results:
+                    r.target_candidate.config = r.hybrid_solution[-1]
+                    r.target_candidate.pose = FrankaRobot.fk(r.hybrid_solution[-1])
+            for result in results:
+                if expert_pipeline == "both":
+                    plan, _ = solve_global_plan(
+                        result.start_candidate,
+                        result.target_candidate,
+                        result.cuboids + result.cylinders,
+                        selfcc,
+                    )
+                    if len(plan) == 0:
+                        continue
+
+                inference_problems.append(
+                    PlanningProblem(
+                        target=result.target_candidate.pose,
+                        q0=result.start_candidate.config,
+                        obstacles=result.cuboids + result.cylinders,
+                    )
+                )
+                pbar.update(1)
+
+    with open(save_path, "wb") as f:
+        pickle.dump({ENV_TYPE: {"task_oriented": inference_problems}}, f)
+
+
+def generate_neutral_inference_data(
+    expert_pipeline: str, how_many: int, save_path: str
+):
+    selfcc = FrankaSelfCollisionChecker()
+    assert (
+        how_many % 2 == 0
+    ), "When generating neutral inference problems, the number of problems must be even"
+    to_neutral_problems = []
+    from_neutral_problems = []
+    with tqdm(total=how_many) as pbar:
+        while len(to_neutral_problems) + len(from_neutral_problems) < how_many:
+            env, all_results = gen_single_env_data()
+            if len(all_results) == 0:
+                continue
+            if expert_pipeline == "global":
+                results = all_results
+            else:
+                results = [
+                    r for r in all_results if len(r.hybrid_solution) == SEQUENCE_LENGTH
+                ]
+                for r in results:
+                    r.target_candidate.config = r.hybrid_solution[-1]
+                    r.target_candidate.pose = FrankaRobot.fk(r.hybrid_solution[-1])
+            for result in results:
+                if (
+                    len(to_neutral_problems) < how_many // 2
+                    and isinstance(result.start_candidate, TaskOrientedCandidate)
+                    and isinstance(result.target_candidate, NeutralCandidate)
+                ):
+                    problem_list = to_neutral_problems
+                elif (
+                    len(from_neutral_problems) < how_many // 2
+                    and isinstance(result.start_candidate, NeutralCandidate)
+                    and isinstance(result.target_candidate, TaskOrientedCandidate)
+                ):
+                    problem_list = from_neutral_problems
+                else:
+                    continue
+
+                if expert_pipeline == "both":
+                    plan, _ = solve_global_plan(
+                        result.start_candidate,
+                        result.target_candidate,
+                        result.cuboids + result.cylinders,
+                        selfcc,
+                    )
+                    if len(plan) == 0:
+                        continue
+
+                problem_list.append(
+                    PlanningProblem(
+                        target=result.target_candidate.pose,
+                        q0=result.start_candidate.config,
+                        obstacles=result.cuboids + result.cylinders,
+                    )
+                )
+                pbar.update(1)
+                break
+    with open(save_path, "wb") as f:
+        pickle.dump(
+            {
+                ENV_TYPE: {
+                    "neutral_start": from_neutral_problems,
+                    "neutral_goal": to_neutral_problems,
+                }
+            },
+            f,
+        )
+
+
+def generate_inference_data(expert_pipeline: str, how_many: int, save_path: str):
+    """
+    Generates a file with inference data for a given scene type. If the problems are neutral
+    (as specified by the global variable), then this will generate an even number of problems.
+
+    Note that the sub-methods here are not the most efficient. For example, they generate two paths
+    for every environment instead of 1. This is for code-simplicity as performance does not matter
+    nearly as much for these examples. To generate a lot of examples, it would be best to run this
+    in a multiprocessing setting for performance (just as we do for the full data generation)
+
+    :param expert_pipeline str: The pipeline for which this problem is solvable (can be expert, global, or both)
+    :param how_many int: How many examples to generate
+    :param save_path str: The path to which the problem set should be saved
+    """
+    assert (
+        not Path(save_path).resolve().exists()
+    ), "Cannot save inference data to a file that already exists"
+
+    if IS_NEUTRAL:
+        generate_neutral_inference_data(expert_pipeline, how_many, save_path)
+    else:
+        generate_task_oriented_inference_data(expert_pipeline, how_many, save_path)
+
+
 if __name__ == "__main__":
     """
     This program makes heavy use of global variables. This is **not** best practice,
@@ -785,7 +936,12 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "env_type",
-        choices=["tabletop", "cubby", "merged_cubby", "dresser"],
+        choices=[
+            "tabletop",
+            "cubby",
+            "merged_cubby",
+            "dresser",
+        ],
         help="Include this argument if there are subtypes",
     )
 
@@ -843,6 +999,28 @@ if __name__ == "__main__":
         help="Generates a few trajectories for a single environment and visualizes them with Pybullet",
     )
 
+    gen_inference = subparsers.add_parser(
+        "for-inference",
+        help="Generates data that be be used to run inference on the model",
+    )
+
+    gen_inference.add_argument(
+        "expert",
+        choices=["hybrid", "global", "both"],
+        help="Which expert pipeline to use when generating the data",
+    )
+
+    gen_inference.add_argument(
+        "how_many",
+        type=int,
+        help="How many problems to generate (1 problem, 1 environment). If the neutral flag is specified, this number must be even.",
+    )
+    gen_inference.add_argument(
+        "save_path",
+        type=str,
+        help="The output file to which the inference problems should be saved",
+    )
+
     args = parser.parse_args()
 
     # Used to tell all the various subprocesses whether to use neutral poses
@@ -861,8 +1039,13 @@ if __name__ == "__main__":
         NUM_PLANS_PER_SCENE = (
             4  # The number of total candidate start or goals to use to plan experts
         )
+    elif args.run_type == "for-inference":
+        NUM_PLANS_PER_SCENE = 2
+
     if args.run_type == "test-environment":
         visualize_single_env()
+    elif args.run_type == "for-inference":
+        generate_inference_data(args.expert, args.how_many, args.save_path)
     else:
         # A temporary directory where the per-scene data will be saved
         global TMP_DATA_DIR

@@ -11,7 +11,11 @@ from robofin.robots import FrankaRobot, FrankaRealRobot, FrankaGripper
 from robofin.bullet import Bullet
 from robofin.collision import FrankaSelfCollisionChecker
 
-from data_pipeline.environments.base_environment import Candidate, Environment
+from data_pipeline.environments.base_environment import (
+    TaskOrientedCandidate,
+    NeutralCandidate,
+    Environment,
+)
 
 
 def random_linear_decrease():
@@ -69,14 +73,14 @@ class TabletopEnvironment(Environment):
 
     def _gen_neutral_candidates(
         self, how_many: int, selfcc: FrankaSelfCollisionChecker
-    ) -> List[Candidate]:
+    ) -> List[NeutralCandidate]:
         """
-        Generate a set of collision free neutral poses (represented as Candidate object)
+        Generate a set of collision free neutral poses (represented as NeutralCandidate object)
 
         :param how_many int: How many neutral poses to generate
         :param selfcc FrankaSelfCollisionChecker: Checks for self collisions using spheres that
                                                   mimic the internal Franka collision checker.
-        :rtype List[Candidate]: A list of neutral poses
+        :rtype List[NeutralCandidate]: A list of neutral poses
         """
         sim = Bullet(gui=False)
         gripper = sim.load_robot(FrankaGripper)
@@ -96,7 +100,7 @@ class TabletopEnvironment(Environment):
                 gripper.marionette(pose)
                 if not sim.in_collision(gripper):
                     candidates.append(
-                        Candidate(
+                        NeutralCandidate(
                             config=sample,
                             pose=pose,
                         )
@@ -302,7 +306,7 @@ class TabletopEnvironment(Environment):
 
     def _gen_additional_candidate_sets(
         self, how_many: int, selfcc: FrankaSelfCollisionChecker
-    ) -> List[List[Candidate]]:
+    ) -> List[List[TaskOrientedCandidate]]:
         """
         Problems in the tabletop environment are symmetric, meaning that all candidates
         generated on the surface of the table are valid start/end poses. However, not all
@@ -315,7 +319,7 @@ class TabletopEnvironment(Environment):
                              is guaranteed to match this number or the function will run forever)
         :param selfcc FrankaSelfCollisionChecker: Checks for self collisions using spheres that
                                                   mimic the internal Franka collision checker.
-        :rtype List[List[Candidate]]: A list of candidate sets, where each has `how_many`
+        :rtype List[List[TaskOrientedCandidate]]: A list of candidate sets, where each has `how_many`
                                       candidates on the table.
         """
         candidate_sets = []
@@ -328,7 +332,9 @@ class TabletopEnvironment(Environment):
             candidate_sets.append(candidate_set)
         return candidate_sets
 
-    def gen_candidate(self, selfcc: FrankaSelfCollisionChecker) -> Optional[Candidate]:
+    def gen_candidate(
+        self, selfcc: FrankaSelfCollisionChecker
+    ) -> Optional[TaskOrientedCandidate]:
         """
         Generates a valid, collision-free end effector pose (according to this
         environment's distribution) and a corresponding collision-free inverse kinematic
@@ -338,7 +344,7 @@ class TabletopEnvironment(Environment):
 
         :param selfcc FrankaSelfCollisionChecker: Checks for self collisions using spheres that
                                                   mimic the internal Franka collision checker.
-        :rtype Candidate: A valid candidate
+        :rtype TaskOrientedCandidate: A valid candidate
         :raises Exception: Raises an exception if there are unsupported objects on the table
         """
         points = self.random_points_on_table(100)
@@ -372,7 +378,7 @@ class TabletopEnvironment(Environment):
                 break
         if pose is None or q is None:
             return None
-        return Candidate(
+        return TaskOrientedCandidate(
             pose=pose,
             config=q,
         )
