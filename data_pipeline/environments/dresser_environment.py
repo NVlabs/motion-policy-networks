@@ -18,14 +18,15 @@ from dataclasses import dataclass
 from typing import List, Optional, Tuple, Dict, Sequence
 
 from data_pipeline.environments.base_environment import (
-    Candidate,
+    TaskOrientedCandidate,
+    NeutralCandidate,
     Environment,
     radius_sample,
 )
 
 
 @dataclass
-class DresserCandidate(Candidate):
+class DresserCandidate(TaskOrientedCandidate):
     """
     Represents a configuration, its end-effector pose (in right_gripper frame), and
     some metadata about the dresser (i.e. which drawer it belongs to and the free space
@@ -473,12 +474,12 @@ class DresserEnvironment(Environment):
 
     def _gen_neutral_candidates(
         self, how_many: int, selfcc: FrankaSelfCollisionChecker
-    ) -> List[Candidate]:
+    ) -> List[NeutralCandidate]:
         sim = Bullet(gui=False)
         gripper = sim.load_robot(FrankaGripper)
         arm = sim.load_robot(FrankaRobot)
         sim.load_primitives(self.obstacles)
-        candidates: List[Candidate] = []
+        candidates: List[NeutralCandidate] = []
         for _ in range(how_many * 50):
             if len(candidates) >= how_many:
                 break
@@ -492,22 +493,16 @@ class DresserEnvironment(Environment):
                 gripper.marionette(pose)
                 if not sim.in_collision(gripper):
                     candidates.append(
-                        DresserCandidate(
+                        NeutralCandidate(
                             config=sample,
-                            drawer_idx=-1,
                             pose=pose,
-                            support_volume=Cuboid(
-                                center=pose.xyz,
-                                dims=np.array([0.1, 0.1, 0.1]),
-                                quaternion=pose.so3.wxyz,
-                            ),
                         )
                     )
         return candidates
 
     def _gen_additional_candidate_sets(
         self, how_many: int, selfcc: FrankaSelfCollisionChecker
-    ) -> List[List[Candidate]]:
+    ) -> List[List[TaskOrientedCandidate]]:
         """
         Creates additional candidates, where the candidates correspond to the support volumes
         of the environment's generated candidates (created by the `gen` function)
@@ -516,21 +511,21 @@ class DresserEnvironment(Environment):
                              to match this number or the function will run forever)
         :param selfcc FrankaSelfCollisionChecker: Checks for self collisions using spheres that
                                                   mimic the internal Franka collision checker.
-        :rtype List[List[Candidate]]: A pair of candidate sets, where each has `how_many`
+        :rtype List[List[TaskOrientedCandidate]]: A pair of candidate sets, where each has `how_many`
                                       candidates that matches the corresponding support volume
                                       for the respective element in `self.demo_candidates`
         """
         start_support = self.demo_candidates[0].support_volume
         target_support = self.demo_candidates[1].support_volume
-        candidate_sets: List[List[Candidate]] = []
+        candidate_sets: List[List[TaskOrientedCandidate]] = []
 
         sim = Bullet(gui=False)
         gripper = sim.load_robot(FrankaGripper)
         arm = sim.load_robot(FrankaRobot)
         sim.load_primitives(self.obstacles)
 
-        for idx in range(len(self.demo_candidates)):
-            candidate_set: List[Candidate] = []
+        for idx, _ in enumerate(self.demo_candidates):
+            candidate_set: List[TaskOrientedCandidate] = []
             ii = 0
             while ii < how_many:
                 pose, q = self.random_pose_and_config(

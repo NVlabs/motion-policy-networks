@@ -31,6 +31,26 @@ class Candidate:
     config: np.ndarray
 
 
+@dataclass
+class TaskOrientedCandidate(Candidate):
+    """
+    Represents a configuration and the corresponding end-effector pose
+    (in the right_gripper frame) for a task oriented pose.
+    """
+
+    pass
+
+
+@dataclass
+class NeutralCandidate(Candidate):
+    """
+    Represents a configuration and the corresponding end-effector pose
+    (in the right_gripper frame) for a neutral pose.
+    """
+
+    pass
+
+
 class Environment(ABC):
     def __init__(self):
         self.generated = False
@@ -81,7 +101,7 @@ class Environment(ABC):
 
     def gen_additional_candidate_sets(
         self, how_many: int, selfcc: FrankaSelfCollisionChecker
-    ) -> List[List[Candidate]]:
+    ) -> List[List[TaskOrientedCandidate]]:
         """
         This creates two sets of `how_many` candidates that
         are intended to be used as start/end respectively. Take the cartesian product of these
@@ -91,7 +111,7 @@ class Environment(ABC):
                              is guaranteed to match this number or the function will run forever)
         :param selfcc FrankaSelfCollisionChecker: Checks for self collisions using spheres that
                                                   mimic the internal Franka collision checker.
-        :rtype List[List[Candidate]]: A list of candidate sets, where each has `how_many`
+        :rtype List[List[TaskOrientedCandidate]]: A list of candidate sets, where each has `how_many`
                                       candidates on the table.
         """
         assert (
@@ -101,7 +121,7 @@ class Environment(ABC):
 
     def gen_neutral_candidates(
         self, how_many: int, selfcc: FrankaSelfCollisionChecker
-    ) -> List[Candidate]:
+    ) -> List[NeutralCandidate]:
         """
         Generate a set of collision free neutral poses and corresponding configurations
         (represented as Candidate object)
@@ -109,7 +129,7 @@ class Environment(ABC):
         :param how_many int: How many neutral poses to generate
         :param selfcc FrankaSelfCollisionChecker: Checks for self collisions using spheres that
                                                   mimic the internal Franka collision checker.
-        :rtype List[Candidate]: A list of neutral poses
+        :rtype List[NeutralCandidate]: A list of neutral poses
         """
         assert (
             self.generated
@@ -130,7 +150,7 @@ class Environment(ABC):
     @abstractmethod
     def _gen_additional_candidate_sets(
         self, how_many: int, selfcc: FrankaSelfCollisionChecker
-    ) -> List[List[Candidate]]:
+    ) -> List[List[TaskOrientedCandidate]]:
         """
         This creates two sets of `how_many` candidates that
         are intended to be used as start/end respectively. Take the cartesian product of these
@@ -140,7 +160,7 @@ class Environment(ABC):
                              is guaranteed to match this number or the function will run forever)
         :param selfcc FrankaSelfCollisionChecker: Checks for self collisions using spheres that
                                                   mimic the internal Franka collision checker.
-        :rtype List[List[Candidate]]: A list of candidate sets, where each has `how_many`
+        :rtype List[List[TaskOrientedCandidate]]: A list of candidate sets, where each has `how_many`
                                       candidates on the table.
         """
         pass
@@ -148,14 +168,14 @@ class Environment(ABC):
     @abstractmethod
     def _gen_neutral_candidates(
         self, how_many: int, selfcc: FrankaSelfCollisionChecker
-    ) -> List[Candidate]:
+    ) -> List[NeutralCandidate]:
         """
         Generate a set of collision free neutral poses and corresponding configurations
-        (represented as Candidate object)
+        (represented as NeutralCandidate object)
 
         :param how_many int: How many neutral poses to generate
         :param selfcc FrankaSelfCollisionChecker: Checks for self collisions using spheres that
                                                   mimic the internal Franka collision checker.
-        :rtype List[Candidate]: A list of neutral poses
+        :rtype List[NeutralCandidate]: A list of neutral poses
         """
         pass
