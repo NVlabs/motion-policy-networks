@@ -640,7 +640,7 @@ def gen_single_env(_: Any):
     n = len(results)
     cuboids = env.cuboids
     cylinders = env.cylinders
-    file_name = f"{TMP_DATA_DIR}/{uuid.uuid1()}.hdf5"
+    file_name = f"{TMP_DATA_DIR}/{uuid.uuid4()}.hdf5"
     with h5py.File(file_name, "w-") as f:
         hybrid_solutions = f.create_dataset("hybrid_solutions", (n, SEQUENCE_LENGTH, 7))
         global_solutions = f.create_dataset("global_solutions", (n, SEQUENCE_LENGTH, 7))
@@ -1049,7 +1049,8 @@ if __name__ == "__main__":
     else:
         # A temporary directory where the per-scene data will be saved
         global TMP_DATA_DIR
-        TMP_DATA_DIR = f"//tmp/tmp_data_{uuid.uuid1()}/"
+        TMP_DATA_DIR = f"/tmp/tmp_data_{uuid.uuid4()}/"
+        assert not Path(TMP_DATA_DIR).exists()
         os.mkdir(TMP_DATA_DIR)
         assert (
             os.path.isdir(TMP_DATA_DIR)
