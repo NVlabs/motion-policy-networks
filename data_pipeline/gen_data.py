@@ -586,7 +586,7 @@ def gen_valid_env(selfcc: FrankaSelfCollisionChecker) -> Environment:
         env_arguments["how_many"] = np.random.randint(3, 15)
     elif ENV_TYPE == "cubby":
         env = CubbyEnvironment()
-    elif ENV_TYPE == "merged_cubby":
+    elif ENV_TYPE == "merged-cubby":
         env = MergedCubbyEnvironment()
     elif ENV_TYPE == "dresser":
         env = DresserEnvironment()
@@ -939,7 +939,7 @@ if __name__ == "__main__":
         choices=[
             "tabletop",
             "cubby",
-            "merged_cubby",
+            "merged-cubby",
             "dresser",
         ],
         help="Include this argument if there are subtypes",
@@ -1018,7 +1018,7 @@ if __name__ == "__main__":
     gen_inference.add_argument(
         "save_path",
         type=str,
-        help="The output file to which the inference problems should be saved",
+        help="The output file to which the inference problems should be saved. Should be a .pkl file",
     )
 
     args = parser.parse_args()
