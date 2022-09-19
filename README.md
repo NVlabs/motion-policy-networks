@@ -223,7 +223,7 @@ the dataset. Some environments are easier than others and therefore we can produ
 data more quickly. To ensure evenness, you will first generate data for each individual
 problem type, downsize the individual sets to match, and then merge them together.
 
-### Generating Data for Individual Scene Types
+### Generating Training Data for Individual Scene Types
 
 You can use [gen_data.py](data_pipeline/gen_data.py) to generate data for a
 single type of environment and either between two task-oriented poses or
@@ -261,6 +261,15 @@ mkdir -p data/cubby/neutral/1
 python3 gen_data.py cubby --neutral full-pipeline /root/mpinets/data_pipeline/data/cubby/neutral/1/
 ```
 
+Likewise, to generate merged cubby scenes, where the necessary cubbies in each
+scene are
+merged to allow for unobstructed paths between the start configurations
+and goal poses, replace `cubby` with `merged_cubby` in the command above.
+```
+cd /root/mpinets/data_pipeline
+mkdir -p data/merged-cubby/neutral/1
+python3 gen_data.py merged-cubby --neutral full-pipeline /root/mpinets/data_pipeline/data/merged-cubby/neutral/1/
+```
 ### Data Cleaning
 After generating the data, you will need to clean it and merge it into a single
 dataset. In the Motion Policy Network dataset, we use the following
@@ -297,7 +306,52 @@ FINAL_DATA_PATH/
     val.hdf5
   test/
     test.hdf5
+````
+### Generating Inference Data for Individual Scene Types
+Inference data differs from training data because it only ever has a single
+problem per environment. These problems are always solvable by one or both expert
+pipelines. To generate this data for a single scene type, use the same
+`gen_data.py` script with a different argument set. For example, to generate
+300 task-oriented problems in dresser scenes solvable by the global pipeline, use the
+following commands. Note that the output file path is a `.pkl` file.
 
+```cd
+cd /root/mpinets/data_pipeline
+mkdir -p data/inference/global
+python3 gen_data.py dresser for-inference global 300 /root/mpinets/data_pipeline/data/inference/global/dresser_task.pkl
+```
+When generating "neutral" poses, the number of requested must be even
+because the inference command will generate equal
+number of problems to and from neutral poses. For example, if you request 300 problems, it will generate 300 of each. For example, to generate 300 problems solvable by the hybrid expert in tabletop settings going to or from neutral poses, use these command. Note that the final problems stored will already have had hindsight goal revision applied.
+```cd
+cd /root/mpinets/data_pipeline
+mkdir -p data/inference
+python3 gen_data.py tabletop --neutral for-inference hybrid 300 /root/mpinets/data_pipeline/data/inference/hybrid/tabletop_neutral.pkl
+```
+
+When generating inference problems solvable by both, the script will first
+solve the Hybrid problem, then use hindsight goal revision, and then solve the
+revised problem with the global planner. For example, to generate 150 task-oriented problems
+in cubby scenes with merged cubbies, use the following commands:
+```cd
+cd /root/mpinets/data_pipeline
+mkdir -p data/inference
+python3 gen_data.py merged-cubby for-inference both 150 /root/mpinets/data_pipeline/data/inference/both/merged_cubby_task.pkl
+```
+Finally, you can merge these into a single test set (such as the one we
+provide above) by simply merging the appropriate pickle files. For example, to
+merge all global-pipeline solvable problems, use the following commands in the
+`python3` terminal.
+```
+from pathlib import Path
+import pickle
+paths = list(Path(/root/mpinets/data_pipeline/data/inference/global/).glob('*.pkl'))
+global_data = {}
+for p in paths:
+    with open(p, 'rb') as f:
+        global_data = {**global_data, **pickle.load(f)}
+with open('/root/mpinets/data_pipeline/data/inference/global/all_global.pkl', 'wb') as g:
+    pickle.dump(global_data, g)
 ```
 ## License
 This work is released with the MIT License.
