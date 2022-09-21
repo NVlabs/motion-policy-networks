@@ -102,35 +102,53 @@ class PlanningProblem:
     Defines a common interface to describe planning problems
     """
 
-    target: SE3  # The target in the `right_gripper` frame
-    q0: np.ndarray  # The starting configuration
-    obstacles: Optional[
-        List[Union[Cuboid, Cylinder]]
-    ] = None  # The obstacles in the scene
+    # The problem target in the `right_gripper` frame
+    target: SE3
+
+    # A trajectory is only successful if the final pose is within this region
+    target_volume: Union[Cuboid, Cylinder]
+
+    # The starting configuration
+    q0: np.ndarray
+
+    # The obstacles in the scene
+    obstacles: Optional[Obstacles] = None
+
+    # An alternate representation of the obstacles
     obstacle_point_cloud: Optional[np.ndarray] = None
+
+    # Trajectories are not successful unless final pose is outside of these regions.
+    target_negative_volumes: Obstacles = field(default_factory=lambda: [])
   ```
 
 
-[You can download a set of test problems
-here.]()
+We have three sets of test problems that you can download--[those solvable by the Global Planner](...),
+[those solvable by the Hybrid Planner](...), and [those solvable by both planners](...).
 
-The inference script will simulate the rollout in PyBullet and visualize the
-perception with Meshcat. When you run the script, it will print a URL
-that you can visit in the browser on your host machine to view the point cloud
+The inference script uses MPiNets to solve problems in these formats and
+provide metrics for their performance. By default, it will also simulate the rollout
+in PyBullet and visualize the perception with Meshcat. When you run the script, it
+will print a URL that you can visit in the browser on your host machine to view the point cloud
 of the scene.
 
-This script will show a single type of scene and class of problem. For example,
-to see visuals of the policy in a tabletop setting moving from a neutral pose
-to a task-oriented pose, run the following. Be sure to use the correct paths
-the checkpoint and test problems.
+This script allows you to choose a scene type and class of problem--or evaluate
+all of them. For example, to see visuals of the policy in a tabletop setting moving from a neutral pose
+to a task-oriented pose where the problems are solvable by the hybrid planner, run the following.
+Be sure to use the correct paths the checkpoint and test problems.
 ```
-python3 mpinets/mpinets/run_inference.py /PATH/TO/corl_2022_hybrid_expert_checkpoint.ckpt /PATH/TO/sample_hybrid_solvable_problems.pkl tabletop neutral-start
+python3 mpinets/mpinets/run_inference.py /PATH/TO/corl_2022_hybrid_expert_checkpoint.ckpt /PATH/TO/hybrid_solvable_problems.pkl tabletop neutral-start
 ```
-To see a set of task-oriented dresser problems
+To see a set of task-oriented dresser problems solvable by the global expert
 ```
-python3 mpinets/mpinets/run_inference.py /PATH/TO/corl_2022_hybrid_expert_checkpoint.ckpt /PATH/TO/sample_hybrid_solvable_problems.pkl dresser neutral-start
+python3 mpinets/mpinets/run_inference.py /PATH/TO/corl_2022_hybrid_expert_checkpoint.ckpt /PATH/TO/global_solvable_problems.pkl dresser neutral-start
 ```
 
+To evaluate the problems and quickly see the metrics, you can also skip the visualization.
+For example, to run all scene types and all problem types without visuals for
+problems solvable by both planners, run the following.
+```
+python3 mpinets/mpinets/run_inference.py /PATH/TO/corl_2022_hybrid_expert_checkpoint.ckpt /PATH/TO/both_solvable_problems.pkl all all --skip-visuals
+```
 To see all of the options available, run
 ```
 python3 mpinets/mpinets/run_inference.py --help

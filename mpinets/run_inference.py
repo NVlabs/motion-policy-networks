@@ -11,7 +11,7 @@ from geometrout.transform import SE3
 
 import pickle
 from dataclasses import dataclass, field
-from typing import List, Union, Optional
+from typing import List, Union, Optional, Dict
 import argparse
 
 import torch
@@ -19,15 +19,20 @@ from robofin.pointcloud.torch import FrankaSampler
 from mpinets.model import MotionPolicyNetwork
 from mpinets.geometry import construct_mixed_point_cloud
 from mpinets.utils import normalize_franka_joints, unnormalize_franka_joints
+from mpinets.metrics import Evaluator
 import trimesh
 import meshcat
 import urchin
+
 
 END_EFFECTOR_FRAME = "right_gripper"
 NUM_ROBOT_POINTS = 2048
 NUM_OBSTACLE_POINTS = 4096
 NUM_TARGET_POINTS = 128
 MAX_ROLLOUT_LENGTH = 150
+
+
+Obstacles = List[Union[Cuboid, Cylinder]]
 
 
 @dataclass
@@ -37,11 +42,14 @@ class PlanningProblem:
     """
 
     target: SE3  # The target in the `right_gripper` frame
+    target_volume: Union[Cuboid, Cylinder]
     q0: np.ndarray  # The starting configuration
-    obstacles: Optional[
-        List[Union[Cuboid, Cylinder]]
-    ] = None  # The obstacles in the scene
+    obstacles: Optional[Obstacles] = None  # The obstacles in the scene
     obstacle_point_cloud: Optional[np.ndarray] = None
+    target_negative_volumes: Obstacles = field(default_factory=lambda: [])
+
+
+ProblemSet = Dict[str, Dict[str, List[PlanningProblem]]]
 
 
 def make_point_cloud_from_problem(
@@ -180,15 +188,13 @@ def rollout_until_success(
     return np.asarray([t.squeeze().detach().cpu().numpy() for t in trajectory])
 
 
-def convert_primitive_problems_to_depth(
-    problems: List[PlanningProblem], environment_type: str
-):
+def convert_primitive_problems_to_depth(problems: ProblemSet, environment_type: str):
     """
     Converts the planning problems in place from primitive-based to point-cloud-based.
     This used PyBullet to create the scene and sample a depth image. That depth image is
     then turned into a point cloud with ray casting.
 
-    :param problems List[PlanningProblem]: The list of problems to convert
+    :param problems ProblemSet: The list of problems to convert
     :param environment_type str: The type of environment (used to determine the camera angle)
     :raises NotImplementedError: Raises an error if the environment type is not supported
     """
@@ -230,18 +236,77 @@ def convert_primitive_problems_to_depth(
         raise NotImplementedError(
             f"Camera angle is not implemented for environment type: {environment_type}"
         )
-    for p in tqdm(problems):
-        franka.marionette(p.q0)
-        sim.load_primitives(p.obstacles)
-        p.obstacle_point_cloud = sim.get_pointcloud_from_camera(
-            camera,
-            remove_robot=franka,
-        )
-        sim.clear_all_obstacles()
+    # Count the problems
+    total_problems = 0
+    for scene_sets in problems.values():
+        for problem_set in scene_sets.values():
+            total_problems += len(problem_set)
+    with tqdm(total=total_problems) as pbar:
+        for scene_sets in problems.values():
+            for problem_set in scene_sets.values():
+                for p in problem_set:
+                    franka.marionette(p.q0)
+                    sim.load_primitives(p.obstacles)
+                    p.obstacle_point_cloud = sim.get_pointcloud_from_camera(
+                        camera,
+                        remove_robot=franka,
+                    )
+                    sim.clear_all_obstacles()
+                    pbar.update(1)
 
 
 @torch.no_grad()
-def visualize_results(mdl_path: str, problems: List[PlanningProblem]):
+def calculate_metrics(mdl_path: str, problems: List[PlanningProblem]):
+    mdl = MotionPolicyNetwork.load_from_checkpoint(mdl_path).cuda()
+    mdl.eval()
+    cpu_fk_sampler = FrankaSampler("cpu", use_cache=True)
+    gpu_fk_sampler = FrankaSampler("cuda:0", use_cache=True)
+    eval = Evaluator()
+
+    for scene_type, scene_sets in problems.items():
+        for problem_type, problem_set in scene_sets.items():
+            eval.create_new_group(f"{scene_type}, {problem_type}")
+            for problem in tqdm(problem_set, leave=False):
+                if problem.obstacle_point_cloud is None:
+                    point_cloud = make_point_cloud_from_primitives(
+                        torch.as_tensor(problem.q0).unsqueeze(0),
+                        problem.target,
+                        problem.obstacles,
+                        cpu_fk_sampler,
+                    )
+                else:
+                    assert len(problem.obstacles) > 0
+                    point_cloud = make_point_cloud_from_problem(
+                        torch.as_tensor(problem.q0).unsqueeze(0),
+                        problem.target,
+                        problem.obstacle_point_cloud,
+                        cpu_fk_sampler,
+                    )
+                start_time = time.time()
+                trajectory = rollout_until_success(
+                    mdl,
+                    problem.q0,
+                    problem.target,
+                    point_cloud.unsqueeze(0).cuda(),
+                    gpu_fk_sampler,
+                )
+                eval.evaluate_trajectory(
+                    trajectory,
+                    0.08,  # We assume the network is to operate at roughly 12hz
+                    problem.target,
+                    problem.obstacles,
+                    problem.target_volume,
+                    problem.target_negative_volumes,
+                    time.time() - start_time,
+                )
+            print(f"Metrics for {scene_type}, {problem_type}")
+            eval.print_group_metrics()
+    print("Overall Metrics")
+    eval.print_overall_metrics()
+
+
+@torch.no_grad()
+def visualize_results(mdl_path: str, problems: ProblemSet):
     """
     Runs a sequence of problems and visualizes the results in Pybullet
 
@@ -253,6 +318,7 @@ def visualize_results(mdl_path: str, problems: List[PlanningProblem]):
     cpu_fk_sampler = FrankaSampler("cpu", use_cache=True)
     gpu_fk_sampler = FrankaSampler("cuda:0", use_cache=True)
     sim = BulletController(hz=12, substeps=20, gui=True)
+    eval = Evaluator()
 
     # Load the meshcat visualizer to visualize point cloud (Pybullet is bad at point clouds)
     viz = meshcat.Visualizer()
@@ -269,64 +335,87 @@ def visualize_results(mdl_path: str, problems: List[PlanningProblem]):
 
     franka = sim.load_robot(FrankaRobot)
     gripper = sim.load_robot(FrankaGripper, collision_free=True)
-    for problem in tqdm(problems, leave=False):
-        target = problem.target
-        if problem.obstacle_point_cloud is None:
-            point_cloud = make_point_cloud_from_primitives(
-                torch.as_tensor(problem.q0).unsqueeze(0),
-                problem.target,
-                problem.obstacles,
-                cpu_fk_sampler,
-            )
-        else:
-            point_cloud = make_point_cloud_from_problem(
-                torch.as_tensor(problem.q0).unsqueeze(0),
-                problem.target,
-                problem.obstacle_point_cloud,
-                cpu_fk_sampler,
-            )
-        trajectory = rollout_until_success(
-            mdl, problem.q0, target, point_cloud.unsqueeze(0).cuda(), gpu_fk_sampler
-        )
-        point_cloud_colors = np.zeros((3, NUM_OBSTACLE_POINTS + NUM_TARGET_POINTS))
-        point_cloud_colors[1, :NUM_OBSTACLE_POINTS] = 1
-        point_cloud_colors[0, NUM_OBSTACLE_POINTS:] = 1
-        viz["point_cloud"].set_object(
-            # Don't visualize robot points
-            meshcat.geometry.PointCloud(
-                position=point_cloud[NUM_ROBOT_POINTS:, :3].numpy().T,
-                color=point_cloud_colors,
-                size=0.005,
-            )
-        )
-        if problem.obstacles is not None:
-            sim.load_primitives(problem.obstacles, visual_only=True)
-        gripper.marionette(problem.target)
-        franka.marionette(trajectory[0])
-        time.sleep(0.2)
-        for q in trajectory:
-            franka.control_position(q)
-            sim.step()
-            sim_config, _ = franka.get_joint_states()
-            # Move meshes in meshcat to match PyBullet
-            for idx, (k, v) in enumerate(
-                urdf.visual_trimesh_fk(sim_config[:8]).items()
-            ):
-                viz[f"robot/{idx}"].set_transform(v)
-            time.sleep(0.08)
-        # Adding extra timesteps with no new controls to allow the simulation to
-        # converge to the final timestep's target and give the viewer time to look at
-        # it
-        for _ in range(20):
-            sim.step()
-            sim_config, _ = franka.get_joint_states()
-            # Move meshes in meshcat to match PyBullet
-            for idx, (k, v) in enumerate(
-                urdf.visual_trimesh_fk(sim_config[:8]).items()
-            ):
-                viz[f"robot/{idx}"].set_transform(v)
-            time.sleep(0.08)
-        sim.clear_all_obstacles()
+    for scene_type, scene_sets in problems.items():
+        for problem_type, problem_set in scene_sets.items():
+            for problem in tqdm(problem_set, leave=False):
+                eval.create_new_group(f"{scene_type}, {problem_type}")
+                if problem.obstacle_point_cloud is None:
+                    point_cloud = make_point_cloud_from_primitives(
+                        torch.as_tensor(problem.q0).unsqueeze(0),
+                        problem.target,
+                        problem.obstacles,
+                        cpu_fk_sampler,
+                    )
+                else:
+                    point_cloud = make_point_cloud_from_problem(
+                        torch.as_tensor(problem.q0).unsqueeze(0),
+                        problem.target,
+                        problem.obstacle_point_cloud,
+                        cpu_fk_sampler,
+                    )
+                start_time = time.time()
+                trajectory = rollout_until_success(
+                    mdl,
+                    problem.q0,
+                    problem.target,
+                    point_cloud.unsqueeze(0).cuda(),
+                    gpu_fk_sampler,
+                )
+                if problem.obstacles is not None:
+                    eval.evaluate_trajectory(
+                        trajectory,
+                        0.08,  # We assume the network is to operate at roughly 12hz
+                        problem.target,
+                        problem.obstacles,
+                        problem.target_volume,
+                        problem.target_negative_volumes,
+                        time.time() - start_time,
+                    )
+                point_cloud_colors = np.zeros(
+                    (3, NUM_OBSTACLE_POINTS + NUM_TARGET_POINTS)
+                )
+                point_cloud_colors[1, :NUM_OBSTACLE_POINTS] = 1
+                point_cloud_colors[0, NUM_OBSTACLE_POINTS:] = 1
+                viz["point_cloud"].set_object(
+                    # Don't visualize robot points
+                    meshcat.geometry.PointCloud(
+                        position=point_cloud[NUM_ROBOT_POINTS:, :3].numpy().T,
+                        color=point_cloud_colors,
+                        size=0.005,
+                    )
+                )
+                if problem.obstacles is not None:
+                    sim.load_primitives(problem.obstacles, visual_only=True)
+                gripper.marionette(problem.target)
+                franka.marionette(trajectory[0])
+                time.sleep(0.2)
+                for q in trajectory:
+                    franka.control_position(q)
+                    sim.step()
+                    sim_config, _ = franka.get_joint_states()
+                    # Move meshes in meshcat to match PyBullet
+                    for idx, (k, v) in enumerate(
+                        urdf.visual_trimesh_fk(sim_config[:8]).items()
+                    ):
+                        viz[f"robot/{idx}"].set_transform(v)
+                    time.sleep(0.08)
+                # Adding extra timesteps with no new controls to allow the simulation to
+                # converge to the final timestep's target and give the viewer time to look at
+                # it
+                for _ in range(20):
+                    sim.step()
+                    sim_config, _ = franka.get_joint_states()
+                    # Move meshes in meshcat to match PyBullet
+                    for idx, (k, v) in enumerate(
+                        urdf.visual_trimesh_fk(sim_config[:8]).items()
+                    ):
+                        viz[f"robot/{idx}"].set_transform(v)
+                    time.sleep(0.08)
+                sim.clear_all_obstacles()
+            print(f"Metrics for {scene_type}, {problem_type}")
+            eval.print_group_metrics()
+    print("Overall Metrics")
+    eval.print_overall_metrics()
 
 
 if __name__ == "__main__":
@@ -341,12 +430,12 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "environment_type",
-        choices=["tabletop", "cubby", "merged-cubby", "dresser"],
+        choices=["tabletop", "cubby", "merged-cubby", "dresser", "all"],
         help="The environment class",
     )
     parser.add_argument(
         "problem_type",
-        choices=["task-oriented", "neutral-start", "neutral-goal"],
+        choices=["task-oriented", "neutral-start", "neutral-goal", "all"],
         help="The type of planning problem",
     )
     parser.add_argument(
@@ -357,12 +446,27 @@ if __name__ == "__main__":
             " uses pointclouds sampled from every side of the primitives in the scene"
         ),
     )
+    parser.add_argument(
+        "--skip-visuals",
+        action="store_true",
+        help=(
+            "If set, will not show visuals and will only display metrics. This will be"
+            " much faster because the trajectories are not displayed"
+        ),
+    )
     args = parser.parse_args()
     with open(args.problems, "rb") as f:
-        all_problems = pickle.load(f)
+        problems = pickle.load(f)
     env_type = args.environment_type.replace("-", "_")
     problem_type = args.problem_type.replace("-", "_")
-    viz_problems = all_problems[env_type][problem_type]
+    if env_type != "all":
+        problems = {env_type: problems[env_type]}
+    if problem_type != "all":
+        for k in problems.keys():
+            problems[k] = {problem_type: problems[k][problem_type]}
     if args.use_depth:
-        convert_primitive_problems_to_depth(viz_problems, env_type)
-    visualize_results(args.mdl_path, viz_problems)
+        convert_primitive_problems_to_depth(problems, env_type)
+    if args.skip_visuals:
+        calculate_metrics(args.mdl_path, problems)
+    else:
+        visualize_results(args.mdl_path, problems)
