@@ -214,13 +214,13 @@ class Evaluator:
         urdf_path = self.fabric_urdf_path
         assert Path(urdf_path).exists()
         fabric_robot_description_path = str(
-            Path(__file__).parent.parent.resolve()
+            Path(__file__).resolve().parent.parent
             / "config"
             / "franka_robot_description.yaml"
         )
         assert Path(fabric_robot_description_path).exists()
         fabric_config_path = str(
-            Path(__file__).parent.parent.resolve()
+            Path(__file__).resolve().parent.parent
             / "config"
             / "franka_fabric_config.yaml"
         )
