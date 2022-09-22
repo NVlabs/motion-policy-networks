@@ -1,3 +1,25 @@
+# MIT License
+#
+# Copyright (c) 2022 NVIDIA CORPORATION & AFFILIATES, University of Washington. All rights reserved.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a
+# copy of this software and associated documentation files (the "Software"),
+# to deal in the Software without restriction, including without limitation
+# the rights to use, copy, modify, merge, publish, distribute, sublicense,
+# and/or sell copies of the Software, and to permit persons to whom the
+# Software is furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL
+# THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
+
 import numpy as np
 import time
 from tqdm.auto import tqdm, trange
@@ -188,61 +210,60 @@ def rollout_until_success(
     return np.asarray([t.squeeze().detach().cpu().numpy() for t in trajectory])
 
 
-def convert_primitive_problems_to_depth(problems: ProblemSet, environment_type: str):
+def convert_primitive_problems_to_depth(problems: ProblemSet):
     """
     Converts the planning problems in place from primitive-based to point-cloud-based.
     This used PyBullet to create the scene and sample a depth image. That depth image is
     then turned into a point cloud with ray casting.
 
     :param problems ProblemSet: The list of problems to convert
-    :param environment_type str: The type of environment (used to determine the camera angle)
     :raises NotImplementedError: Raises an error if the environment type is not supported
     """
     print("Converting primitive problems to depth")
     sim = Bullet()
     franka = sim.load_robot(FrankaRobot)
     # These are the camera views used for evaluations in Motion Policy Networks
-    if "dresser" in environment_type:
-        camera = SE3(
-            xyz=[0.08307640315968651, 1.986952324350807, 0.9996085854670145],
-            quaternion=[
-                -0.10162310189063647,
-                -0.06726290364234049,
-                0.5478233048853433,
-                0.8276702686337273,
-            ],
-        ).inverse
-    elif "cubby" in environment_type:
-        camera = SE3(
-            xyz=[0.08307640315968651, 1.986952324350807, 0.9996085854670145],
-            quaternion=[
-                -0.10162310189063647,
-                -0.06726290364234049,
-                0.5478233048853433,
-                0.8276702686337273,
-            ],
-        ).inverse
-    elif "tabletop" in environment_type:
-        camera = SE3(
-            xyz=[1.5031788593125708, -1.817341016921562, 1.278088299149147],
-            quaternion=[
-                0.8687241016192855,
-                0.4180885960330695,
-                0.11516106409944685,
-                0.23928704613569252,
-            ],
-        ).inverse
-    else:
-        raise NotImplementedError(
-            f"Camera angle is not implemented for environment type: {environment_type}"
-        )
     # Count the problems
     total_problems = 0
     for scene_sets in problems.values():
         for problem_set in scene_sets.values():
             total_problems += len(problem_set)
     with tqdm(total=total_problems) as pbar:
-        for scene_sets in problems.values():
+        for environment_type, scene_sets in problems.items():
+            if "dresser" in environment_type:
+                camera = SE3(
+                    xyz=[0.08307640315968651, 1.986952324350807, 0.9996085854670145],
+                    quaternion=[
+                        -0.10162310189063647,
+                        -0.06726290364234049,
+                        0.5478233048853433,
+                        0.8276702686337273,
+                    ],
+                ).inverse
+            elif "cubby" in environment_type:
+                camera = SE3(
+                    xyz=[0.08307640315968651, 1.986952324350807, 0.9996085854670145],
+                    quaternion=[
+                        -0.10162310189063647,
+                        -0.06726290364234049,
+                        0.5478233048853433,
+                        0.8276702686337273,
+                    ],
+                ).inverse
+            elif "tabletop" in environment_type:
+                camera = SE3(
+                    xyz=[1.5031788593125708, -1.817341016921562, 1.278088299149147],
+                    quaternion=[
+                        0.8687241016192855,
+                        0.4180885960330695,
+                        0.11516106409944685,
+                        0.23928704613569252,
+                    ],
+                ).inverse
+            else:
+                raise NotImplementedError(
+                    f"Camera angle is not implemented for environment type: {environment_type}"
+                )
             for problem_set in scene_sets.values():
                 for p in problem_set:
                     franka.marionette(p.q0)
@@ -465,7 +486,7 @@ if __name__ == "__main__":
         for k in problems.keys():
             problems[k] = {problem_type: problems[k][problem_type]}
     if args.use_depth:
-        convert_primitive_problems_to_depth(problems, env_type)
+        convert_primitive_problems_to_depth(problems)
     if args.skip_visuals:
         calculate_metrics(args.mdl_path, problems)
     else:
