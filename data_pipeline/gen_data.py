@@ -192,15 +192,17 @@ def get_fabric_chunks(
         FABRIC_URDF_PATH
     ).exists(), "The hardcoded Isaac Sim URDF file does not exist (are you running this in the docker?)--replace with a valid path"
     fabric_robot_description_path = str(
-        Path(__file__).parent.parent.resolve()
+        Path(__file__).resolve().parent.parent
         / "config"
         / "franka_robot_description.yaml"
     )
-    assert Path(fabric_robot_description_path).exists()
+    assert Path(
+        fabric_robot_description_path
+    ).exists(), f"{fabric_robot_description_path} not found"
     fabric_config_path = str(
-        Path(__file__).parent.parent.resolve() / "config" / "franka_fabric_config.yaml"
+        Path(__file__).resolve().parent.parent / "config" / "franka_fabric_config.yaml"
     )
-    assert Path(fabric_config_path).exists()
+    assert Path(fabric_config_path).exists(), f"{fabric_config_path} not found"
 
     # Load robot description
     robot_description = lula.load_robot(fabric_robot_description_path, FABRIC_URDF_PATH)
