@@ -1,5 +1,7 @@
 FROM nvcr.io/nvidia/isaac-sim:2022.1.0
 
+WORKDIR /root
+
 # There is an issue with the Isaac Sim docker where it can't install from Apt
 RUN echo "deb http://archive.ubuntu.com/ubuntu/ bionic main restricted" > /etc/apt/sources.list \
   && echo "deb http://archive.ubuntu.com/ubuntu/ bionic-updates main restricted" >> /etc/apt/sources.list \
@@ -29,15 +31,28 @@ RUN apt update \
     libode-dev \
     wget \
     libyaml-cpp-dev \
+    python3.7 \
     python3.7-dev \
+    libpython3.7-dev \
     libboost-python-dev \
     libboost-numpy-dev \
     git \
+    curl \
+    ninja-build \
   && apt-get clean \
   && rm -rf /var/lib/apt
 
-# Clone repos necessary to build OMPL and build it against the Isaac Sim Python
-RUN /isaac-sim/kit/python/bin/python3 -m pip install -vU https://github.com/CastXML/pygccxml/archive/develop.zip pyplusplus numpy \
+# RUN update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.6 1 \
+#   && update-alternatives --install /usr/bin/python3 python3 /usr/bin/python3.7 2 \
+#   && update-alternatives --set python3 /usr/bin/python3.7 \
+#   && curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py \
+#   && python3.7 get-pip.py
+RUN rm /usr/bin/python3 && ln -s python3.7 /usr/bin/python3 \
+  && curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py \
+  && python3.7 get-pip.py
+
+# Clone repos necessary to build OMPL and build it against the Python 3.7
+RUN python3 -m pip install -vU https://github.com/CastXML/pygccxml/archive/develop.zip pyplusplus numpy \
  && wget -q -O- https://data.kitware.com/api/v1/file/5e8b740d2660cbefba944189/download | tar zxf - -C ${HOME} \
  && wget -O - https://github.com/ompl/ompl/archive/1.5.2.tar.gz | tar zxf - \
  && export CXX=g++ \
@@ -45,14 +60,16 @@ RUN /isaac-sim/kit/python/bin/python3 -m pip install -vU https://github.com/Cast
  && export PATH=${HOME}/castxml/bin:${PATH} \
  && mkdir -p ompl-1.5.2/build/Release \
  && cd ompl-1.5.2/build/Release \
- && cmake ../.. -DPYTHON_EXEC=/isaac-sim/kit/python/bin/python3 \
+ && cmake ../.. -DPYTHON_EXEC=/usr/bin/python3.7 \
  && make update_bindings \
  && make \
  && make install
 
-# Set the PYTHONPATH so that Python has access to Lula (and Geometric Fabrics)
-ENV PYTHONPATH=/isaac-sim/exts/omni.isaac.lula/pip_prebundle/
-ENV PATH="/isaac-sim/kit/python/bin:${PATH}"
+# Set the PYTHONPATH so that Python has access to Lula (and Geometric Fabrics) and OMPL
+# It appears that the apt installable version of python3.7 uses a Debian-only path, so
+# adding the standard site-packages back into the PYTHONPATH (because it appears to be
+# the default installation path for OMPL)
+ENV PYTHONPATH=/isaac-sim/exts/omni.isaac.lula/pip_prebundle/:/usr/lib/python3.7/site-packages
 
 # Section 2. Install Learning Tools (Cuda, Python Dependencies)
 # Install cuda 11.3 (this should be upgraded if Pytorch is also upgraded)
@@ -99,7 +116,7 @@ RUN python3 -m pip install --upgrade pip setuptools \
     ipython \
     pybullet \
     pyquaternion \
-    geometrout==0.0.34 \
+    geometrout==0.0.3.4 \
     ikfast-pybind  \
     tqdm \
     urchin==0.0.24 \
@@ -109,7 +126,7 @@ RUN python3 -m pip install --upgrade pip setuptools \
     triangle \
     termcolor \
     meshcat \
-    git+https://github.com/fishbotics/pointnet2_ops.git@main@v3.2.0 \
+    git+https://github.com/fishbotics/pointnet2_ops.git@v3.2.0 \
   && python3 -m pip install git+https://github.com/fishbotics/robofin.git@v0.0.1 git+https://github.com/fishbotics/atob@v0.0.1
 
 # Section 3. Install ROS dependencies for the interactive tutorial
@@ -147,5 +164,4 @@ ENV ROS_HOSTNAME=localhost
 ENV ROS_MASTER_URI=http://localhost:11311
 
 # Section 4. Final setup items
-WORKDIR /root
 ENTRYPOINT []
