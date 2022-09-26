@@ -33,7 +33,7 @@ from robofin.robots import FrankaRobot, FrankaRealRobot, FrankaGripper
 from robofin.bullet import Bullet
 from robofin.collision import FrankaSelfCollisionChecker
 
-from data_pipeline.environments.base_environment import (
+from mpinets.data_pipeline.environments.base_environment import (
     TaskOrientedCandidate,
     NeutralCandidate,
     Environment,
