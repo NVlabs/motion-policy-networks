@@ -243,40 +243,38 @@ problem type, downsize the individual sets to match, and then merge them togethe
 
 ### Generating Training Data for Individual Scene Types
 
-You can use [gen_data.py](data_pipeline/gen_data.py) to generate data for a
+You can use [gen_data.py](mpinets/data_pipeline/gen_data.py) to generate data for a
 single type of environment and either between two task-oriented poses or
 between a neutral pose and a task-oriented one. This
 file should have a self-explanatory help string, which you can access with
-`mpinets/data_pipeline/gen_data.py --help`.
+`mpinets/mpinets/data_pipeline/gen_data.py --help`.
 
 Some examples of data generation:
 
 To visualize some examples generated from a set of dressers where the robot
 reaches between drawers, you can do
 ```
-cd /root/mpinets/data_pipeline
+cd /root/mpinets/mpinets/data_pipeline
 python3 gen_data.py dresser test-environment
 ```
 To run the a similar visualization test where the trajectories all start or end
 with a collision-free neutral pose, you can use
 ```
-cd /root/mpinets/data_pipeline
+cd /root/mpinets/mpinets/data_pipeline
 python3 gen_data.py dresser --neutral test-environment
 ```
 To test the data pipeline (i.e. including how the data is saved on disk)
 and generate a small dataset within randomized tabletop environments using
 only task-oriented poses, you can run
 ```
-cd /root/mpinets/data_pipeline
-mkdir -p data/tabletop/task_oriented/1
-python3 gen_data.py tabletop test-pipeline /root/mpinets/data_pipeline/data/tabletop/task_oriented/1/
+mkdir -p /root/data/tabletop/task_oriented/1
+python3 /root/mpinets/data_pipeline/gen_data.py tabletop test-pipeline /root/data/tabletop/task_oriented/1/
 ```
 To generate a large dataset of trajectories in 2x2 cubby environments where each trajectory begins or
 ends with a neutral configuration.
 ```
-cd /root/mpinets/data_pipeline
-mkdir -p data/cubby/neutral/1
-python3 gen_data.py cubby --neutral full-pipeline /root/mpinets/data_pipeline/data/cubby/neutral/1/
+mkdir -p /root/data/cubby/neutral/1
+python3 /root/mpinets/data_pipeline/gen_data.py cubby --neutral full-pipeline /root/data/cubby/neutral/1/
 ```
 
 Likewise, to generate merged cubby scenes, where the necessary cubbies in each
@@ -284,9 +282,8 @@ scene are
 merged to allow for unobstructed paths between the start configurations
 and goal poses, replace `cubby` with `merged_cubby` in the command above.
 ```
-cd /root/mpinets/data_pipeline
-mkdir -p data/merged-cubby/neutral/1
-python3 gen_data.py merged-cubby --neutral full-pipeline /root/mpinets/data_pipeline/data/merged-cubby/neutral/1/
+mkdir -p /root/data/merged-cubby/neutral/1
+python3 /root/mpinets/data_pipeline/gen_data.py merged-cubby --neutral full-pipeline /root/data/merged-cubby/neutral/1/
 ```
 ### Data Cleaning
 After generating the data, you will need to clean it and merge it into a single
@@ -302,7 +299,7 @@ proportions:
 - Tabletop Neutral: 1 / 6
 - Tabletop Task Oriented: 1 / 6
 
-We provide a script [process_data.py](data_pipeline/process_data.py) that can
+We provide a script [process_data.py](mpinets/data_pipeline/process_data.py) that can
 take the output of `gen_data.py` and clean it up. After running the `full-pipeline` mode
 of`gen_data.py`, it will produce a file in the specified directory called
 `all_data.py`. This is all the data of that multi-process run, which has data
@@ -334,17 +331,15 @@ pipelines. To generate this data for a single scene type, use the same
 following commands. Note that the output file path is a `.pkl` file.
 
 ```cd
-cd /root/mpinets/data_pipeline
-mkdir -p data/inference/global
-python3 gen_data.py dresser for-inference global 300 /root/mpinets/data_pipeline/data/inference/global/dresser_task.pkl
+mkdir -p /root/data/inference/global
+python3 /root/mpinets/data_pipeline/gen_data.py dresser for-inference global 300 /root/data/inference/global/dresser_task.pkl
 ```
 When generating "neutral" poses, the number of requested must be even
 because the inference command will generate equal
 number of problems to and from neutral poses. For example, if you request 300 problems, it will generate 300 of each. For example, to generate 300 problems solvable by the hybrid expert in tabletop settings going to or from neutral poses, use these command. Note that the final problems stored will already have had hindsight goal revision applied.
 ```cd
-cd /root/mpinets/data_pipeline
-mkdir -p data/inference
-python3 gen_data.py tabletop --neutral for-inference hybrid 300 /root/mpinets/data_pipeline/data/inference/hybrid/tabletop_neutral.pkl
+mkdir -p /root/data/inference/hybrid/
+python3 /root/mpinets/data_pipeline/gen_data.py tabletop --neutral for-inference hybrid 300 /root/data/inference/hybrid/tabletop_neutral.pkl
 ```
 
 When generating inference problems solvable by both, the script will first
@@ -352,9 +347,8 @@ solve the Hybrid problem, then use hindsight goal revision, and then solve the
 revised problem with the global planner. For example, to generate 150 task-oriented problems
 in cubby scenes with merged cubbies, use the following commands:
 ```cd
-cd /root/mpinets/data_pipeline
-mkdir -p data/inference
-python3 gen_data.py merged-cubby for-inference both 150 /root/mpinets/data_pipeline/data/inference/both/merged_cubby_task.pkl
+mkdir -p /root/data/inference/both
+python3 /root/mpinets/data_pipeline/gen_data.py merged-cubby for-inference both 150 /root/data/inference/both/merged_cubby_task.pkl
 ```
 Finally, you can merge these into a single test set (such as the one we
 provide above) by simply merging the appropriate pickle files. For example, to
@@ -363,12 +357,12 @@ merge all global-pipeline solvable problems, use the following commands in the
 ```
 from pathlib import Path
 import pickle
-paths = list(Path(/root/mpinets/data_pipeline/data/inference/global/).glob('*.pkl'))
+paths = list(Path(/root/data/inference/global/).glob('*.pkl'))
 global_data = {}
 for p in paths:
     with open(p, 'rb') as f:
         global_data = {**global_data, **pickle.load(f)}
-with open('/root/mpinets/data_pipeline/data/inference/global/all_global.pkl', 'wb') as g:
+with open('/root/data/inference/global/all_global.pkl', 'wb') as g:
     pickle.dump(global_data, g)
 ```
 ## License

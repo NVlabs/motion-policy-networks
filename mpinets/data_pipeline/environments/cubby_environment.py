@@ -34,7 +34,7 @@ from copy import deepcopy
 
 from pyquaternion import Quaternion
 
-from data_pipeline.environments.base_environment import (
+from mpinets.data_pipeline.environments.base_environment import (
     TaskOrientedCandidate,
     NeutralCandidate,
     Environment,

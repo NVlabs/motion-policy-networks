@@ -48,20 +48,20 @@ from dataclasses import dataclass, field
 import logging
 import lula
 from atob.trajectory import Trajectory
-from data_pipeline.environments.base_environment import (
+from mpinets.data_pipeline.environments.base_environment import (
     Candidate,
     TaskOrientedCandidate,
     NeutralCandidate,
     Environment,
 )
-from data_pipeline.environments.cubby_environment import (
+from mpinets.data_pipeline.environments.cubby_environment import (
     CubbyEnvironment,
     MergedCubbyEnvironment,
 )
-from data_pipeline.environments.dresser_environment import (
+from mpinets.data_pipeline.environments.dresser_environment import (
     DresserEnvironment,
 )
-from data_pipeline.environments.tabletop_environment import (
+from mpinets.data_pipeline.environments.tabletop_environment import (
     TabletopEnvironment,
 )
 
