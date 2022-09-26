@@ -131,7 +131,7 @@ RUN apt-mark hold libcublas-11-3 libnccl2 libcublas-dev-11-3 libnccl-dev
 # ikfast and robofin are in the same pip install statement
 RUN python3 -m pip install --upgrade pip setuptools \
   && python3 -m pip install \
-    torch torchvision --extra-index-url https://download.pytorch.org/whl/cu113 \
+    torch --extra-index-url https://download.pytorch.org/whl/cu113 \
     pytorch_lightning \
     h5py \
     trimesh \
