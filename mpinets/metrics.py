@@ -35,10 +35,7 @@ from termcolor import colored
 
 from geometrout.primitive import Cuboid, Sphere, Cylinder
 from typing import Sequence, Union, List, Tuple, Any, Dict, Optional
-
-
-Obstacles = List[Union[Cuboid, Sphere, Cylinder]]
-Trajectory = Sequence[Union[Sequence, np.ndarray]]
+from mpinets.types import Obstacles, Trajectory
 
 
 def percent_true(arr: Sequence) -> float:
