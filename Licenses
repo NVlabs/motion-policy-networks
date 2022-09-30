@@ -21,7 +21,7 @@ OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 franka_ros 0.10.0
 ----------------
 
-The Franka gripper mesh used in interactive_demo/meshes/half_open_gripper.stl was constructed using
+The Franka gripper mesh used in interactive_demo/mpinets_ros/meshes/half_open_gripper.stl was constructed using
 meshes in the "franka_description" component of the franka_ros package.
 
 Site:    https://github.com/frankaemika/franka_ros/
