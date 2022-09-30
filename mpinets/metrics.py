@@ -24,7 +24,6 @@ import numpy as np
 
 from robofin.robots import FrankaRobot, FrankaGripper, FrankaRealRobot
 from robofin.bullet import Bullet
-import lula
 import time
 import pickle
 from pathlib import Path
@@ -32,10 +31,20 @@ import itertools
 from robofin.collision import FrankaSelfCollisionChecker
 from geometrout.transform import SE3, SO3
 from termcolor import colored
+import logging
+from mpinets.types import Obstacles
 
 from geometrout.primitive import Cuboid, Sphere, Cylinder
 from typing import Sequence, Union, List, Tuple, Any, Dict, Optional
 from mpinets.types import Obstacles, Trajectory
+
+try:
+    import lula
+except ImportError:
+    logging.info("Lula not available. Falling back to bullet only")
+    USE_LULA = False
+else:
+    USE_LULA = True
 
 
 def percent_true(arr: Sequence) -> float:
@@ -229,56 +238,101 @@ class Evaluator:
         self.current_group_key = key
         self.current_group = self.groups[key]
 
-    def get_fabric(self, obstacles: Obstacles) -> lula.Fabric:
-        urdf_path = self.fabric_urdf_path
-        assert Path(urdf_path).exists()
-        fabric_robot_description_path = str(
-            Path(__file__).resolve().parent.parent
-            / "config"
-            / "franka_robot_description.yaml"
-        )
-        assert Path(fabric_robot_description_path).exists()
-        fabric_config_path = str(
-            Path(__file__).resolve().parent.parent
-            / "config"
-            / "franka_fabric_config.yaml"
-        )
-        assert Path(fabric_config_path).exists()
+    if USE_LULA:
 
-        # Load robot description.
-        robot_description = lula.load_robot(fabric_robot_description_path, urdf_path)
-        fabric_state = lula.create_fabric_state()
+        def _get_fabric(self, obstacles: Obstacles) -> lula.Fabric:
+            urdf_path = self.fabric_urdf_path
+            assert Path(urdf_path).exists()
+            fabric_robot_description_path = str(
+                Path(__file__).resolve().parent.parent
+                / "config"
+                / "franka_robot_description.yaml"
+            )
+            assert Path(fabric_robot_description_path).exists()
+            fabric_config_path = str(
+                Path(__file__).resolve().parent.parent
+                / "config"
+                / "franka_fabric_config.yaml"
+            )
+            assert Path(fabric_config_path).exists()
 
-        world = lula.create_world()
-        for o in obstacles:
-            if o.is_zero_volume():
-                continue
-            if isinstance(o, Cuboid):
-                box_obstacle_pose = lula.Pose3(o.pose.matrix)
-                box = lula.create_obstacle(lula.Obstacle.Type.CUBE)
-                box.set_attribute(
-                    lula.Obstacle.Attribute.SIDE_LENGTHS, np.asarray(o.dims)
-                )
-                world.add_obstacle(box, box_obstacle_pose)
-            elif isinstance(o, Cylinder):
-                cylinder_obstacle_pose = lula.Pose3(o.pose.matrix)
-                cylinder = lula.create_obstacle(lula.Obstacle.Type.CYLINDER)
-                cylinder.set_attribute(lula.Obstacle.Attribute.RADIUS, o.radius)
-                cylinder.set_attribute(lula.Obstacle.Attribute.HEIGHT, o.height)
-                world.add_obstacle(cylinder, cylinder_obstacle_pose)
+            # Load robot description.
+            robot_description = lula.load_robot(
+                fabric_robot_description_path, urdf_path
+            )
+            fabric_state = lula.create_fabric_state()
 
-        world_view = world.add_world_view()
+            world = lula.create_world()
+            for o in obstacles:
+                if o.is_zero_volume():
+                    continue
+                if isinstance(o, Cuboid):
+                    box_obstacle_pose = lula.Pose3(o.pose.matrix)
+                    box = lula.create_obstacle(lula.Obstacle.Type.CUBE)
+                    box.set_attribute(
+                        lula.Obstacle.Attribute.SIDE_LENGTHS, np.asarray(o.dims)
+                    )
+                    world.add_obstacle(box, box_obstacle_pose)
+                elif isinstance(o, Cylinder):
+                    cylinder_obstacle_pose = lula.Pose3(o.pose.matrix)
+                    cylinder = lula.create_obstacle(lula.Obstacle.Type.CYLINDER)
+                    cylinder.set_attribute(lula.Obstacle.Attribute.RADIUS, o.radius)
+                    cylinder.set_attribute(lula.Obstacle.Attribute.HEIGHT, o.height)
+                    world.add_obstacle(cylinder, cylinder_obstacle_pose)
 
-        # Create RMPflow configuration.
-        fabric_config = lula.create_fabric_config(
-            fabric_config_path,
-            robot_description,
-            "right_gripper",
-            world_view,
-        )
-        # Create RMPflow policy
-        fabric = lula.create_fabric(fabric_config)
-        return fabric
+            world_view = world.add_world_view()
+
+            # Create RMPflow configuration.
+            fabric_config = lula.create_fabric_config(
+                fabric_config_path,
+                robot_description,
+                "right_gripper",
+                world_view,
+            )
+            # Create RMPflow policy
+            fabric = lula.create_fabric(fabric_config)
+            return fabric
+
+        def in_collision(self, trajectory: Trajectory, obstacles: Obstacles) -> bool:
+            """
+            Checks whether the trajectory is in collision according to all including
+            collision checkers (using AND between different methods)
+
+            :param trajectory Trajectory: The trajectory
+            :param obstacles Obstacles: Obstacles to check
+            :rtype bool: Whether there is a collision
+            """
+            fabric = self._get_fabric(obstacles)
+            for i, q in enumerate(trajectory):
+                self.hd_sim_robot.marionette(q)
+                self.ld_sim_robot.marionette(q)
+                if (
+                    self.sim.in_collision(self.ld_sim_robot, check_self=True)
+                    and self.sim.in_collision(self.hd_sim_robot, check_self=True)
+                    and fabric.in_collision_with_obstacle(q.astype(np.double))
+                ):
+                    return True
+            return False
+
+    else:
+
+        def in_collision(self, trajectory: Trajectory, obstacles: Obstacles) -> bool:
+            """
+            Checks whether the trajectory is in collision according to all including
+            collision checkers (using AND between different methods)
+
+            :param trajectory Trajectory: The trajectory
+            :param obstacles Obstacles: Obstacles to check
+            :rtype bool: Whether there is a collision
+            """
+            for i, q in enumerate(trajectory):
+                self.hd_sim_robot.marionette(q)
+                self.ld_sim_robot.marionette(q)
+                if self.sim.in_collision(
+                    self.ld_sim_robot, check_self=True
+                ) and self.sim.in_collision(self.hd_sim_robot, check_self=True):
+                    return True
+            return False
 
     def has_self_collision(self, trajectory: Trajectory) -> bool:
         """
@@ -304,16 +358,18 @@ class Evaluator:
         :param obstacles Obstacles: Obstacles to check
         :rtype bool: Whether there is a collision
         """
-        fabric = self.get_fabric(obstacles)
+        if USE_LULA:
+            fabric = self.get_fabric(obstacles)
         for i, q in enumerate(trajectory):
             self.hd_sim_robot.marionette(q)
             self.ld_sim_robot.marionette(q)
-            if (
-                self.sim.in_collision(self.ld_sim_robot, check_self=True)
-                and self.sim.in_collision(self.hd_sim_robot, check_self=True)
-                and fabric.in_collision_with_obstacle(q.astype(np.double))
-            ):
-                return True
+            if self.sim.in_collision(
+                self.ld_sim_robot, check_self=True
+            ) and self.sim.in_collision(self.hd_sim_robot, check_self=True):
+                if not USE_LULA:
+                    return True
+                if fabric.in_collision_with_obstacle(q.astype(np.double)):
+                    return True
         return False
 
     def get_collision_depths(
