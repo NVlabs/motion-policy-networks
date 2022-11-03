@@ -278,7 +278,7 @@ class Evaluator:
         :rtype bool: Whether there is a collision
         """
         if USE_LULA:
-            fabric = self.get_fabric(obstacles)
+            fabric = self._get_fabric(obstacles)
         for i, q in enumerate(trajectory):
             self.hd_sim_robot.marionette(q)
             self.ld_sim_robot.marionette(q)
