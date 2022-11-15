@@ -85,6 +85,11 @@ either inside the docker or on the host machine.
 All usage described below must happen inside the docker container. For all the commands below,
 assume that they should be run inside the docker container.
 
+In order to easily import mpinets as a module in our python scripts, we first install it in developer mode as follows:
+```
+pip install -e .
+```
+
 ## Inference With Motion Policy Networks
 
 In order to run inference, you will need a pretrained model file. This will be
