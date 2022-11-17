@@ -59,7 +59,7 @@ sudo docker login nvcr.io
 ```
 Next, clone this repo using:
 ```
-git clone https://gitlab-master.nvidia.com/srl/motion-policy-networks
+git clone https://github.com/NVlabs/motion-policy-networks.git
 ```
 Navigate inside the repo (e.g. `cd motion-policy-networks`) and build the docker with
 ```
@@ -84,6 +84,11 @@ either inside the docker or on the host machine.
 
 All usage described below must happen inside the docker container. For all the commands below,
 assume that they should be run inside the docker container.
+
+In order to easily import mpinets as a module in our python scripts, we first install it in developer mode as follows:
+```
+pip install -e .
+```
 
 ## Inference With Motion Policy Networks
 
