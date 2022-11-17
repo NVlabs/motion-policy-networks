@@ -59,7 +59,7 @@ sudo docker login nvcr.io
 ```
 Next, clone this repo using:
 ```
-git clone https://gitlab-master.nvidia.com/srl/motion-policy-networks
+git clone https://github.com/NVlabs/motion-policy-networks.git
 ```
 Navigate inside the repo (e.g. `cd motion-policy-networks`) and build the docker with
 ```
