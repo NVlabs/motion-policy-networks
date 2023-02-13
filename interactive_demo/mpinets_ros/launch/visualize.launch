@@ -1,7 +1,7 @@
 <launch>
   <arg name="mdl_path" />
   <arg name="point_cloud_path" />
-  <param name="robot_description" command="$(find xacro)/xacro $(find franka_description)/robots/panda_arm.urdf.xacro hand:=1" />
+  <param name="robot_description" command="$(find xacro)/xacro $(find franka_description)/robots/panda/panda.urdf.xacro hand:=true" />
   <node pkg="mpinets_ros" type="planning_node.py" name="mpinets_planning_node" output="screen" clear_params="true">
     <param name="mdl_path" value="$(arg mdl_path)" />
     <param name="point_cloud_path" value="$(arg point_cloud_path)" />

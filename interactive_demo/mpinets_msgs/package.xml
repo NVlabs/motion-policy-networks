@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <package format="2">
   <name>mpinets_msgs</name>
+  <maintainer email="someone@mail.com">Someone</maintainer>
   <version>0.0.0</version>
   <description>The mpinets_msgs package</description>
   <license>MIT</license>
