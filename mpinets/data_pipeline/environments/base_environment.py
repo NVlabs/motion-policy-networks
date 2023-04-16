@@ -30,6 +30,7 @@ from geometrout.primitive import Cuboid, Cylinder
 from dataclasses import dataclass, field
 from geometrout.transform import SE3
 import numpy as np
+from mpinets.types import Obstacles
 
 
 def radius_sample(center: float, radius: float):
@@ -51,6 +52,7 @@ class Candidate:
 
     pose: SE3
     config: np.ndarray
+    negative_volumes: Obstacles = field(default_factory=lambda: [])
 
 
 @dataclass

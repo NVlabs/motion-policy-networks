@@ -160,7 +160,10 @@ class DresserEnvironment(Environment):
                 ):
                     continue
 
-                (target_pose, target_q,) = self.random_pose_and_config(
+                (
+                    target_pose,
+                    target_q,
+                ) = self.random_pose_and_config(
                     sim, gripper, arm, selfcc, target_support_volume
                 )
                 sim.clear_all_obstacles()
@@ -180,12 +183,14 @@ class DresserEnvironment(Environment):
                 config=start_q,
                 drawer_idx=idx_start,
                 support_volume=start_support_volume,
+                negative_volumes=[target_support_volume],
             ),
             DresserCandidate(
                 pose=target_pose,
                 config=target_q,
                 drawer_idx=idx_target,
                 support_volume=target_support_volume,
+                negative_volumes=[start_support_volume],
             ),
         ]
         return True
@@ -374,7 +379,6 @@ class DresserEnvironment(Environment):
         scene_mesh = self.scene.dump(concatenate=True)
 
         for support_surface in support_surfaces:
-
             (
                 is_support_polyhedra,
                 inscribing_polyhedra,
@@ -518,6 +522,9 @@ class DresserEnvironment(Environment):
                         NeutralCandidate(
                             config=sample,
                             pose=pose,
+                            negative_volumes=[
+                                x.support_volume for x in self.demo_candidates
+                            ],
                         )
                     )
         return candidates
@@ -564,6 +571,7 @@ class DresserEnvironment(Environment):
                             config=q,
                             drawer_idx=self.demo_candidates[idx].drawer_idx,
                             support_volume=self.demo_candidates[idx].support_volume,
+                            negative_volumes=self.demo_candidates[idx].negative_volumes,
                         )
                     )
                     ii += 1

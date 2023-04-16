@@ -65,7 +65,7 @@ from mpinets.data_pipeline.environments.tabletop_environment import (
     TabletopEnvironment,
 )
 
-from mpinets.run_inference import PlanningProblem
+from mpinets.types import PlanningProblem
 
 from typing import Tuple, List, Union, Sequence, Optional, Any
 
@@ -841,11 +841,21 @@ def generate_task_oriented_inference_data(
                     if len(plan) == 0:
                         continue
 
+                if hasattr(result.target_candidate, "support_volume"):
+                    target_volume = result.target_candidate.support_volume
+                else:
+                    target_volume = Cuboid(
+                        center=result.target_candidate.pose.xyz,
+                        dims=[0.05, 0.05, 0.05],
+                        quaternion=result.target_candidate.pose.wxyz,
+                    )
                 inference_problems.append(
                     PlanningProblem(
                         target=result.target_candidate.pose,
                         q0=result.start_candidate.config,
                         obstacles=result.cuboids + result.cylinders,
+                        target_volume=target_volume,
+                        target_negative_volumes=result.target_candidate.negative_volumes,
                     )
                 )
                 pbar.update(1)
@@ -903,11 +913,21 @@ def generate_neutral_inference_data(
                     if len(plan) == 0:
                         continue
 
+                if hasattr(result.target_candidate, "support_volume"):
+                    target_volume = result.target_candidate.support_volume
+                else:
+                    target_volume = Cuboid(
+                        center=result.target_candidate.pose.xyz,
+                        dims=[0.05, 0.05, 0.05],
+                        quaternion=result.target_candidate.pose.wxyz,
+                    )
                 problem_list.append(
                     PlanningProblem(
                         target=result.target_candidate.pose,
                         q0=result.start_candidate.config,
                         obstacles=result.cuboids + result.cylinders,
+                        target_volume=target_volume,
+                        target_negative_volumes=result.target_candidate.negative_volumes,
                     )
                 )
                 pbar.update(1)

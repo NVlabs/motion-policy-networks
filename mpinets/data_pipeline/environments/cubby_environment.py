@@ -490,12 +490,14 @@ class CubbyEnvironment(Environment):
                 config=start_q,
                 pocket_idx=idx,
                 support_volume=start_support_volume,
+                negative_volumes=[s for ii, s in enumerate(supports) if ii != idx],
             ),
             CubbyCandidate(
                 pose=target_pose,
                 config=target_q,
                 pocket_idx=jdx,
                 support_volume=target_support_volume,
+                negative_volumes=[s for ii, s in enumerate(supports) if ii != jdx],
             ),
         )
         return True
@@ -578,6 +580,7 @@ class CubbyEnvironment(Environment):
                         NeutralCandidate(
                             config=sample,
                             pose=pose,
+                            negative_volumes=self.cubby.support_volumes,
                         )
                     )
         return candidates
@@ -618,6 +621,7 @@ class CubbyEnvironment(Environment):
                             config=q,
                             pocket_idx=candidate.pocket_idx,
                             support_volume=candidate.support_volume,
+                            negative_volumes=candidate.negative_volumes,
                         )
                     )
                     ii += 1
