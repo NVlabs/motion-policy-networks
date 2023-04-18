@@ -269,7 +269,7 @@ class DresserEnvironment(Environment):
                 min_distance >= trimesh.constants.tol.merge
                 and min_distance <= max_height
             ):
-                if support_surface.polygon.type == "MultiPolygon":
+                if support_surface.polygon.geom_type == "MultiPolygon":
                     return False, None
 
                 if (min_distance - erosion_distance) > 0:
@@ -352,7 +352,7 @@ class DresserEnvironment(Environment):
                 )
 
                 for polygon in polygons:
-                    if polygon.type == "MultiPolygon":
+                    if polygon.geom_type == "MultiPolygon":
                         polys = list(polygon)
                     else:
                         polys = [polygon]

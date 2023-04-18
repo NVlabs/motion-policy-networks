@@ -52,7 +52,7 @@ class Candidate:
 
     pose: SE3
     config: np.ndarray
-    negative_volumes: Obstacles = field(default_factory=lambda: [])
+    negative_volumes: Obstacles
 
 
 @dataclass

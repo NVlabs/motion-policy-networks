@@ -32,6 +32,7 @@ from multiprocessing import Pool
 from tqdm.auto import tqdm
 from pathlib import Path
 import h5py
+from pyquaternion import Quaternion
 from robofin.collision import FrankaSelfCollisionChecker
 from robofin.bullet import Bullet, BulletFranka
 from robofin.robots import FrankaRobot, FrankaRealRobot, FrankaGripper
@@ -214,7 +215,7 @@ def get_fabric_chunks(
         FABRIC_URDF_PATH
     ).exists(), "The hardcoded Isaac Sim URDF file does not exist (are you running this in the docker?)--replace with a valid path"
     fabric_robot_description_path = str(
-        Path(__file__).resolve().parent.parent
+        Path(__file__).resolve().parent.parent.parent
         / "config"
         / "franka_robot_description.yaml"
     )
@@ -222,7 +223,9 @@ def get_fabric_chunks(
         fabric_robot_description_path
     ).exists(), f"{fabric_robot_description_path} not found"
     fabric_config_path = str(
-        Path(__file__).resolve().parent.parent / "config" / "franka_fabric_config.yaml"
+        Path(__file__).resolve().parent.parent.parent
+        / "config"
+        / "franka_fabric_config.yaml"
     )
     assert Path(fabric_config_path).exists(), f"{fabric_config_path} not found"
 
@@ -297,9 +300,10 @@ def get_fabric_chunks(
         joint_velocity += dt * joint_accel
         time_so_far += dt
         chunk.append(joint_position.copy())
-    final_pose = SE3(
-        matrix=kinematics.pose(joint_position, END_EFFECTOR_FRAME).matrix()
-    )
+    final_pose_matrix = kinematics.pose(joint_position, END_EFFECTOR_FRAME).matrix()
+    final_pose_xyz = final_pose_matrix[:3, -1]
+    final_pose_q = Quaternion(matrix=final_pose_matrix, atol=1e-5)
+    final_pose = SE3(xyz=final_pose_xyz, quaternion=final_pose_q)
     return chunked_trajectory, final_pose
 
 
@@ -847,7 +851,7 @@ def generate_task_oriented_inference_data(
                     target_volume = Cuboid(
                         center=result.target_candidate.pose.xyz,
                         dims=[0.05, 0.05, 0.05],
-                        quaternion=result.target_candidate.pose.wxyz,
+                        quaternion=result.target_candidate.pose.so3.wxyz,
                     )
                 inference_problems.append(
                     PlanningProblem(
