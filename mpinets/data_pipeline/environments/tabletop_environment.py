@@ -122,10 +122,7 @@ class TabletopEnvironment(Environment):
                 gripper.marionette(pose)
                 if not sim.in_collision(gripper):
                     candidates.append(
-                        NeutralCandidate(
-                            config=sample,
-                            pose=pose,
-                        )
+                        NeutralCandidate(config=sample, pose=pose, negative_volumes=[])
                     )
         return candidates
 
@@ -403,6 +400,7 @@ class TabletopEnvironment(Environment):
         return TaskOrientedCandidate(
             pose=pose,
             config=q,
+            negative_volumes=[],
         )
 
     def random_object(
