@@ -42,7 +42,7 @@ from mpinets.model import MotionPolicyNetwork
 from mpinets.geometry import construct_mixed_point_cloud
 from mpinets.utils import normalize_franka_joints, unnormalize_franka_joints
 from mpinets.metrics import Evaluator
-from mpinets.types import PlanningProblem, ProblemSet
+from mpinets.mpinets_types import PlanningProblem, ProblemSet
 import trimesh
 import meshcat
 import urchin
