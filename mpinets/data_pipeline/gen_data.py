@@ -66,7 +66,7 @@ from mpinets.data_pipeline.environments.tabletop_environment import (
     TabletopEnvironment,
 )
 
-from mpinets.types import PlanningProblem
+from mpinets.mpinets_types import PlanningProblem
 
 from typing import Tuple, List, Union, Sequence, Optional, Any
 

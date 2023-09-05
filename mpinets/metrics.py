@@ -32,11 +32,10 @@ from robofin.collision import FrankaSelfCollisionChecker
 from geometrout.transform import SE3, SO3
 from termcolor import colored
 import logging
-from mpinets.types import Obstacles
 
 from geometrout.primitive import Cuboid, Sphere, Cylinder
 from typing import Sequence, Union, List, Tuple, Any, Dict, Optional
-from mpinets.types import Obstacles, Trajectory
+from mpinets.mpinets_types import Obstacles, Trajectory
 from mpinets.third_party.sparc import sparc
 
 try:

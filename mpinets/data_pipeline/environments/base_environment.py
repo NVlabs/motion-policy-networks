@@ -30,7 +30,7 @@ from geometrout.primitive import Cuboid, Cylinder
 from dataclasses import dataclass, field
 from geometrout.transform import SE3
 import numpy as np
-from mpinets.types import Obstacles
+from mpinets.mpinets_types import Obstacles
 
 
 def radius_sample(center: float, radius: float):
