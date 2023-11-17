@@ -634,7 +634,7 @@ def gen_valid_env(selfcc: FrankaSelfCollisionChecker) -> Environment:
             and len(env.cylinders) < CYLINDER_CUTOFF
         )
         if success:
-            sucess = verify_has_solvable_problems(env, selfcc)
+            success = verify_has_solvable_problems(env, selfcc)
     return env
 
 
